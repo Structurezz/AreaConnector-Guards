@@ -17,10 +17,10 @@ function RequireSecurity({ children }) {
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'security') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8">
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-8">
         <div className="glass-card p-8 max-w-sm text-center">
-          <p className="text-red-400 font-semibold mb-2">Access Denied</p>
-          <p className="text-white/50 text-sm">This portal is for Security Guards only.</p>
+          <p className="text-red-600 font-semibold mb-2">Access Denied</p>
+          <p className="text-slate-500 text-sm">This portal is for Security Guards only.</p>
         </div>
       </div>
     );
@@ -47,13 +47,20 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <SocketProvider>
           <AppRoutes />
           <Toaster position="top-right" toastOptions={{
-            style: { background: '#0B1C3D', color: 'white', border: '1px solid rgba(201,168,76,0.3)' },
-            success: { iconTheme: { primary: '#C9A84C', secondary: '#0B1C3D' } },
+            style: {
+              background: '#FFFFFF',
+              color: '#0F172A',
+              border: '1px solid rgba(15,23,42,0.10)',
+              borderRadius: '10px',
+              fontSize: '0.875rem',
+              boxShadow: '0 4px 16px rgba(15,23,42,0.10)',
+            },
+            success: { iconTheme: { primary: '#10B981', secondary: '#ECFDF5' } },
           }} />
         </SocketProvider>
       </AuthProvider>

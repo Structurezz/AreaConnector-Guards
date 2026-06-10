@@ -65,9 +65,12 @@ function getSirenAudio() {
   return _sirenAudio;
 }
 
-// Preload as soon as the module loads
+// Preload after first user gesture so the Audio element is ready before an alert fires
 if (typeof window !== 'undefined') {
-  try { getSirenAudio(); } catch {}
+  const preload = () => { try { getSirenAudio(); } catch {} };
+  window.addEventListener('click',   preload, { once: true });
+  window.addEventListener('keydown', preload, { once: true });
+  window.addEventListener('touchend', preload, { once: true });
 }
 
 function syntheticSiren(loops = 5) {

@@ -18,7 +18,8 @@ export const SocketProvider = ({ children }) => {
       'http://localhost:5001';
     const socket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
+      upgrade: true,
     });
 
     socketRef.current = socket;
