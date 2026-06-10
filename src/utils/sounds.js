@@ -1,7 +1,6 @@
 let _ctx = null;
 
 // Called on first user click — unlocks the AudioContext for the entire session.
-// Browsers block audio until a user gesture has occurred; once unlocked it stays running.
 function unlock() {
   try {
     if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -50,7 +49,28 @@ export function playSound(type) {
   } catch {}
 }
 
-export function playSiren(loops = 5) {
+// Derive backend base URL from VITE_API_URL (strip trailing /api)
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+const SIREN_URL = `${API_BASE}/public/dragon-studio-police-siren-397963.mp3`;
+
+let _sirenAudio = null;
+
+function getSirenAudio() {
+  if (!_sirenAudio) {
+    _sirenAudio = new Audio(SIREN_URL);
+    _sirenAudio.preload = 'auto';
+    // Reset so it can be replayed
+    _sirenAudio.addEventListener('ended', () => { _sirenAudio.currentTime = 0; });
+  }
+  return _sirenAudio;
+}
+
+// Preload as soon as the module loads
+if (typeof window !== 'undefined') {
+  try { getSirenAudio(); } catch {}
+}
+
+function syntheticSiren(loops = 5) {
   try {
     const c = getCtx();
     const gain = c.createGain();
@@ -69,4 +89,26 @@ export function playSiren(loops = 5) {
     gain.gain.setValueAtTime(0.7, c.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + loops * loopDuration);
   } catch {}
+}
+
+export function playSiren(loops = 5) {
+  try {
+    unlock();
+    const audio = getSirenAudio();
+    audio.currentTime = 0;
+    const played = audio.play();
+    if (played) {
+      played.catch(() => {
+        // Autoplay blocked or file failed — fall back to synthetic
+        syntheticSiren(loops);
+      });
+
+      // Stop the MP3 after the same rough duration as the synthetic (loops × 0.6s)
+      setTimeout(() => {
+        try { audio.pause(); audio.currentTime = 0; } catch {}
+      }, loops * 600);
+    }
+  } catch {
+    syntheticSiren(loops);
+  }
 }
