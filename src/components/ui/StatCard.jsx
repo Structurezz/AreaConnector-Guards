@@ -19,13 +19,13 @@ const AnimatedNumber = ({ value }) => {
   return <span>{display.toLocaleString()}</span>;
 };
 
-export default function StatCard({ label, value, icon: Icon, color = 'gold', trend, suffix = '' }) {
+export default function StatCard({ label, value, icon: Icon, color = 'green', trend, suffix = '' }) {
   const colorMap = {
-    gold: 'text-gold bg-gold/10',
-    green: 'text-emerald-400 bg-emerald-400/10',
-    red: 'text-red-400 bg-red-400/10',
-    blue: 'text-blue-400 bg-blue-400/10',
-    purple: 'text-purple-400 bg-purple-400/10',
+    gold:   'text-emerald-600 bg-emerald-50 border border-emerald-100',
+    green:  'text-emerald-600 bg-emerald-50 border border-emerald-100',
+    red:    'text-red-600 bg-red-50 border border-red-100',
+    blue:   'text-blue-600 bg-blue-50 border border-blue-100',
+    purple: 'text-violet-600 bg-violet-50 border border-violet-100',
   };
 
   return (
@@ -35,15 +35,15 @@ export default function StatCard({ label, value, icon: Icon, color = 'gold', tre
           <Icon size={22} />
         </div>
         {trend !== undefined && (
-          <span className={`text-xs font-medium ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-xs font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
             {trend >= 0 ? '+' : ''}{trend}%
           </span>
         )}
       </div>
-      <div className="text-3xl font-bold font-display text-white mb-1">
+      <div className="text-3xl font-bold text-slate-900 mb-1">
         <AnimatedNumber value={value} />{suffix}
       </div>
-      <div className="text-sm text-white/50 font-medium">{label}</div>
+      <div className="text-sm text-slate-500 font-medium">{label}</div>
     </div>
   );
 }

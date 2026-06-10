@@ -11,22 +11,29 @@ import { playSound } from '../utils/sounds';
 import { format } from 'date-fns';
 
 function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
-  const isActive = visitor.status === 'active';
-  const isIn = visitor.status === 'checked-in';
-  const isDone = visitor.status === 'checked-out';
+  const isActive      = visitor.status === 'active';
+  const isIn          = visitor.status === 'checked-in';
+  const isDone        = visitor.status === 'checked-out';
   const isBlacklisted = visitor.status === 'blacklisted';
 
   return (
-    <div className={`glass-card-gold p-6 animate-fade-in ${isBlacklisted ? 'border-red-500/50 bg-red-500/5' : ''}`}>
-      {/* Visitor header */}
+    <div className={`glass-card p-6 animate-fade-in ${isBlacklisted ? '' : ''}`}
+      style={isBlacklisted ? { border: '1px solid #FCA5A5', background: '#FEF2F2' } : {}}>
+
+      {/* Header */}
       <div className="flex items-start gap-4 mb-5">
-        <div className="w-16 h-16 rounded-2xl bg-gold/10 border-2 border-gold/30 flex items-center justify-center text-gold text-3xl font-bold flex-shrink-0">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold flex-shrink-0"
+          style={{ background: 'rgba(59,130,246,0.10)', border: '2px solid rgba(59,130,246,0.20)', color: '#2563EB' }}>
           {visitor.visitorName[0]}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-display font-bold text-white leading-tight">{visitor.visitorName}</h2>
+          <h2 className="text-xl font-bold mb-0.5" style={{ color: '#0F172A' }}>{visitor.visitorName}</h2>
           {visitor.visitorPhone && (
-            <a href={`tel:${visitor.visitorPhone}`} className="flex items-center gap-1.5 text-white/50 text-sm mt-0.5 hover:text-gold transition-colors">
+            <a href={`tel:${visitor.visitorPhone}`}
+              className="flex items-center gap-1.5 text-sm mt-0.5 transition-colors"
+              style={{ color: '#64748B' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#2563EB'}
+              onMouseLeave={e => e.currentTarget.style.color = '#64748B'}>
               <Phone size={12} /> {visitor.visitorPhone}
             </a>
           )}
@@ -36,66 +43,58 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
 
       {/* Info grid */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-          <div className="text-white/40 text-xs mb-1 flex items-center gap-1"><User size={10} /> Purpose</div>
-          <div className="text-white text-sm font-medium">{visitor.purpose}</div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-          <div className="text-white/40 text-xs mb-1 flex items-center gap-1"><Home size={10} /> Host Unit</div>
-          <div className="text-white text-sm font-medium">
-            {visitor.hostUnitId?.unitNumber
-              ? `Unit ${visitor.hostUnitId.unitNumber}${visitor.hostUnitId.block ? ` · Block ${visitor.hostUnitId.block}` : ''}`
-              : visitor.hostResidentId?.name || '—'}
+        {[
+          { icon: User,     label: 'Purpose',    value: visitor.purpose },
+          { icon: Home,     label: 'Host Unit',  value: visitor.hostUnitId?.unitNumber ? `Unit ${visitor.hostUnitId.unitNumber}${visitor.hostUnitId.block ? ` · Block ${visitor.hostUnitId.block}` : ''}` : visitor.hostResidentId?.name || '—' },
+          { icon: Calendar, label: 'Expected',   value: format(new Date(visitor.expectedDate), 'MMM d, yyyy'), sub: format(new Date(visitor.expectedDate), 'p') },
+          { icon: User,     label: 'Invited by', value: visitor.hostResidentId?.name || '—' },
+        ].map(({ icon: Icon, label, value, sub }) => (
+          <div key={label} className="rounded-xl p-3" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#94A3B8' }}>
+              <Icon size={10} /> {label}
+            </div>
+            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{value}</div>
+            {sub && <div className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{sub}</div>}
           </div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-          <div className="text-white/40 text-xs mb-1 flex items-center gap-1"><Calendar size={10} /> Expected</div>
-          <div className="text-white text-sm font-medium">
-            {format(new Date(visitor.expectedDate), 'MMM d, yyyy')}
-          </div>
-          <div className="text-white/40 text-xs">{format(new Date(visitor.expectedDate), 'p')}</div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-          <div className="text-white/40 text-xs mb-1 flex items-center gap-1"><User size={10} /> Invited by</div>
-          <div className="text-white text-sm font-medium">{visitor.hostResidentId?.name || '—'}</div>
-        </div>
+        ))}
         {visitor.entryTime && (
-          <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
-            <div className="text-emerald-400 text-xs mb-1 flex items-center gap-1"><LogIn size={10} /> Checked In</div>
-            <div className="text-white text-sm font-medium">{format(new Date(visitor.entryTime), 'p')}</div>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.18)' }}>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#059669' }}>
+              <LogIn size={10} /> Checked In
+            </div>
+            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{format(new Date(visitor.entryTime), 'p')}</div>
           </div>
         )}
         {visitor.exitTime && (
-          <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
-            <div className="text-blue-400 text-xs mb-1 flex items-center gap-1"><LogOut size={10} /> Checked Out</div>
-            <div className="text-white text-sm font-medium">{format(new Date(visitor.exitTime), 'p')}</div>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)' }}>
+            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#2563EB' }}>
+              <LogOut size={10} /> Checked Out
+            </div>
+            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{format(new Date(visitor.exitTime), 'p')}</div>
           </div>
         )}
       </div>
 
-      {/* Actions */}
       {isBlacklisted && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 font-bold">
-          <AlertTriangle size={20} />
-          ACCESS DENIED — This visitor is blacklisted
+        <div className="flex items-center gap-3 p-4 rounded-xl font-bold"
+          style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C' }}>
+          <AlertTriangle size={20} /> ACCESS DENIED — This visitor is blacklisted
         </div>
       )}
-
       {isActive && (
         <button onClick={onCheckIn} className="btn-primary w-full gap-2 py-3.5 text-base">
           <LogIn size={20} /> Check In Visitor
         </button>
       )}
-
       {isIn && (
         <button onClick={onCheckOut} className="btn-outline w-full gap-2 py-3.5 text-base">
           <LogOut size={20} /> Check Out Visitor
         </button>
       )}
-
       {isDone && (
-        <div className="flex items-center justify-center gap-2 p-3.5 rounded-xl bg-white/5 text-white/50">
-          <CheckCircle size={18} className="text-emerald-400" />
+        <div className="flex items-center justify-center gap-2 p-3.5 rounded-xl"
+          style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#64748B' }}>
+          <CheckCircle size={18} style={{ color: '#10B981' }} />
           Visitor has already checked out
         </div>
       )}
@@ -104,10 +103,10 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
 }
 
 export default function SecurityDashboard() {
-  const [code, setCode] = useState('');
-  const [visitor, setVisitor] = useState(null);
-  const [state, setState] = useState(null); // null | 'found' | 'not_found' | 'blacklisted'
-  const [loading, setLoading] = useState(false);
+  const [code, setCode]           = useState('');
+  const [visitor, setVisitor]     = useState(null);
+  const [state, setState]         = useState(null);
+  const [loading, setLoading]     = useState(false);
   const [sessionLog, setSessionLog] = useState([]);
 
   const handleVerify = async (e) => {
@@ -117,7 +116,6 @@ export default function SecurityDashboard() {
     setLoading(true);
     setVisitor(null);
     setState(null);
-
     try {
       const { data } = await visitorAPI.verify(trimmed);
       setVisitor(data.data);
@@ -126,18 +124,9 @@ export default function SecurityDashboard() {
     } catch (err) {
       const status = err.response?.status;
       if (status === 404) { playSound('error'); setState('not_found'); }
-      else if (status === 403) {
-        playSound('error');
-        setVisitor(err.response?.data?.data);
-        setState('blacklisted');
-      } else {
-        playSound('error');
-        setState('not_found');
-        toast.error('Verification failed');
-      }
-    } finally {
-      setLoading(false);
-    }
+      else if (status === 403) { playSound('error'); setVisitor(err.response?.data?.data); setState('blacklisted'); }
+      else { playSound('error'); setState('not_found'); toast.error('Verification failed'); }
+    } finally { setLoading(false); }
   };
 
   const handleCheckIn = async () => {
@@ -163,25 +152,48 @@ export default function SecurityDashboard() {
   const reset = () => { setCode(''); setVisitor(null); setState(null); };
 
   return (
-    <div className="max-w-xl mx-auto space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="text-center">
-        <div className="w-14 h-14 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center mx-auto mb-3">
-          <Shield size={28} className="text-gold" />
+    <div className="max-w-lg mx-auto space-y-5 animate-fade-in">
+
+      {/* ── Hero ── */}
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 text-center"
+        style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 60%, #1D4ED8 100%)' }}
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
+          style={{ background: 'rgba(255,255,255,0.07)' }} />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: 'rgba(255,255,255,0.05)' }} />
+
+        <div className="relative">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.30)' }}>
+            <Shield size={28} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1" style={{ letterSpacing: '-0.02em' }}>
+            Gate Security
+          </h1>
+          <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            Visitor access verification terminal
+          </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.95)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+            {format(new Date(), 'EEEE · HH:mm')}
+          </div>
         </div>
-        <h1 className="text-3xl font-display font-bold text-white mb-1">Gate Security</h1>
-        <p className="text-white/45 text-sm">Enter or scan a visitor access code to verify</p>
       </div>
 
-      {/* Code input form */}
-      <div className="glass-card-gold p-6">
+      {/* Code input */}
+      <div className="glass-card p-6">
         <form onSubmit={handleVerify} className="space-y-4">
           <div>
-            <label className="text-sm text-white/60 mb-2 block text-center">Visitor Access Code</label>
+            <label className="text-sm font-medium mb-2 block text-center" style={{ color: '#475569' }}>
+              Visitor Access Code
+            </label>
             <div className="relative">
-              <QrCode size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <QrCode size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
               <input
-                className="input-field text-center visitor-code text-2xl tracking-[0.4em] uppercase pl-10 py-4"
+                className="input-field text-center text-2xl tracking-[0.4em] uppercase pl-10 py-4 visitor-code"
                 placeholder="ABC123"
                 value={code}
                 onChange={(e) => {
@@ -199,29 +211,33 @@ export default function SecurityDashboard() {
           <button
             type="submit"
             disabled={loading || code.trim().length < 3}
-            className="btn-primary w-full py-3.5 text-base gap-2"
-          >
+            className="btn-primary w-full py-3.5 text-base gap-2">
             <Search size={18} />
             {loading ? 'Verifying...' : 'Verify Code'}
           </button>
         </form>
 
-        {/* Code progress indicator */}
+        {/* Code progress */}
         <div className="flex justify-center gap-1.5 mt-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={`w-5 h-1.5 rounded-full transition-all ${i < code.length ? 'bg-gold' : 'bg-white/15'}`} />
+            <div key={i}
+              className="w-5 h-1.5 rounded-full transition-all"
+              style={{ background: i < code.length ? '#3B82F6' : '#E2E8F0' }} />
           ))}
         </div>
       </div>
 
       {/* NOT FOUND */}
       {state === 'not_found' && (
-        <div className="glass-card p-5 border-red-500/30 bg-red-500/5 animate-fade-in">
+        <div className="glass-card p-5 animate-fade-in"
+          style={{ border: '1px solid #FECACA', background: '#FEF2F2' }}>
           <div className="flex items-center gap-3 mb-3">
-            <XCircle className="text-red-400 flex-shrink-0" size={24} />
+            <XCircle size={24} style={{ color: '#EF4444', flexShrink: 0 }} />
             <div>
-              <div className="font-bold text-red-400">Invalid Access Code</div>
-              <div className="text-sm text-white/60">No visitor pass found for <span className="font-mono text-white">{code}</span></div>
+              <div className="font-bold" style={{ color: '#B91C1C' }}>Invalid Access Code</div>
+              <div className="text-sm" style={{ color: '#64748B' }}>
+                No visitor pass found for <span className="font-mono" style={{ color: '#0F172A' }}>{code}</span>
+              </div>
             </div>
           </div>
           <button onClick={reset} className="btn-outline w-full text-sm">Try Again</button>
@@ -230,19 +246,22 @@ export default function SecurityDashboard() {
 
       {/* BLACKLISTED */}
       {state === 'blacklisted' && (
-        <div className="glass-card p-5 border-red-500/40 bg-red-500/10 animate-fade-in">
-          <div className="flex items-center gap-3 text-red-400 mb-2">
+        <div className="glass-card p-5 animate-fade-in"
+          style={{ border: '1px solid #FCA5A5', background: '#FEF2F2' }}>
+          <div className="flex items-center gap-3 mb-2" style={{ color: '#B91C1C' }}>
             <AlertTriangle size={22} />
             <span className="font-bold text-lg">ACCESS DENIED</span>
           </div>
-          <div className="text-white font-semibold">{visitor?.visitorName}</div>
-          <div className="text-white/50 text-sm mb-3">{visitor?.purpose}</div>
-          <div className="text-red-400 text-sm font-medium">This visitor has been blacklisted by estate management.</div>
-          <button onClick={reset} className="btn-outline w-full text-sm mt-4">Clear</button>
+          <div className="font-semibold mb-0.5" style={{ color: '#0F172A' }}>{visitor?.visitorName}</div>
+          <div className="text-sm mb-3" style={{ color: '#64748B' }}>{visitor?.purpose}</div>
+          <div className="text-sm font-medium mb-4" style={{ color: '#DC2626' }}>
+            This visitor has been blacklisted by estate management.
+          </div>
+          <button onClick={reset} className="btn-outline w-full text-sm">Clear</button>
         </div>
       )}
 
-      {/* FOUND — show visitor card */}
+      {/* FOUND */}
       {state === 'found' && visitor && (
         <>
           <VisitorResultCard visitor={visitor} onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} />
@@ -255,16 +274,20 @@ export default function SecurityDashboard() {
       {/* Session log */}
       {sessionLog.length > 0 && (
         <div className="glass-card p-5">
-          <h2 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">This Session</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#94A3B8' }}>
+            This Session
+          </h2>
           <div className="space-y-2">
             {sessionLog.map((log, i) => (
               <div key={i} className="flex items-center gap-3 text-sm">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.action === 'Check In' ? 'bg-emerald-400' : 'bg-blue-400'}`} />
-                <span className="text-white/75 flex-1 truncate">{log.name}</span>
-                <span className={`text-xs font-semibold ${log.action === 'Check In' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: log.action === 'Check In' ? '#10B981' : '#3B82F6' }} />
+                <span className="flex-1 truncate" style={{ color: '#334155' }}>{log.name}</span>
+                <span className="text-xs font-semibold"
+                  style={{ color: log.action === 'Check In' ? '#10B981' : '#3B82F6' }}>
                   {log.action}
                 </span>
-                <span className="text-white/25 text-xs ml-1">{format(new Date(log.time), 'HH:mm')}</span>
+                <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>{format(new Date(log.time), 'HH:mm')}</span>
               </div>
             ))}
           </div>

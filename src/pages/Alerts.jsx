@@ -54,25 +54,29 @@ export default function SecurityAlerts() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display font-bold text-white mb-1">Active Alerts</h1>
-        <p className="text-white/50 text-sm">Real-time security and emergency alerts</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-1">Active Alerts</h1>
+        <p className="text-slate-500 text-sm">Real-time security and emergency alerts</p>
       </div>
 
       {loading ? (
         <div className="flex justify-center p-12"><Spinner /></div>
       ) : alerts.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <CheckCircle size={40} className="text-emerald-400 mx-auto mb-3" />
-          <div className="text-emerald-400 font-semibold text-lg">All Clear</div>
-          <div className="text-white/40 text-sm mt-1">No open alerts at this time</div>
+          <CheckCircle size={40} className="text-emerald-500 mx-auto mb-3" />
+          <div className="text-emerald-600 font-semibold text-lg">All Clear</div>
+          <div className="text-slate-400 text-sm mt-1">No open alerts at this time</div>
         </div>
       ) : (
         <div className="space-y-4">
           {alerts.map((a) => (
-            <div key={a._id}
+            <div
+              key={a._id}
               className={`glass-card p-5 border ${
-                a.status === 'open' ? 'border-red-500/40 bg-red-500/8 animate-pulse-slow' : 'border-amber-500/20'
-              }`}>
+                a.status === 'open'
+                  ? 'border-red-200 bg-red-50/50'
+                  : 'border-amber-200 bg-amber-50/30'
+              }`}
+            >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -82,16 +86,16 @@ export default function SecurityAlerts() {
                     <Badge variant={alertTypeBadge(a.type)}>{a.type}</Badge>
                     <Badge variant={alertStatusBadge(a.status)}>{a.status}</Badge>
                   </div>
-                  <div className="text-white font-semibold mb-0.5">
+                  <div className="text-slate-900 font-semibold mb-0.5">
                     {a.residentId?.name}
                     {a.unitId?.unitNumber && ` · Unit ${a.unitId.unitNumber}`}
                   </div>
-                  {a.note && <p className="text-white/60 text-sm mb-2">{a.note}</p>}
-                  <div className="text-xs text-white/30">
+                  {a.note && <p className="text-slate-500 text-sm mb-2">{a.note}</p>}
+                  <div className="text-xs text-slate-400">
                     {format(new Date(a.createdAt), 'MMM d, yyyy · HH:mm:ss')}
                   </div>
                   {a.residentId?.phone && (
-                    <a href={`tel:${a.residentId.phone}`} className="text-gold text-sm hover:underline mt-1 block">
+                    <a href={`tel:${a.residentId.phone}`} className="text-emerald-600 text-sm hover:underline mt-1 block">
                       Call {a.residentId.phone}
                     </a>
                   )}

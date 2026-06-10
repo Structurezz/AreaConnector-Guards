@@ -40,8 +40,8 @@ export default function SecurityLog() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display font-bold text-white mb-1">Entry Log</h1>
-        <p className="text-white/50 text-sm">Today's visitor movements</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-1">Entry Log</h1>
+        <p className="text-slate-500 text-sm">Today's visitor movements</p>
       </div>
 
       <div className="glass-card overflow-hidden">
@@ -53,28 +53,28 @@ export default function SecurityLog() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-slate-100 bg-slate-50">
                   {['Visitor', 'Host', 'Unit', 'Expected', 'Entry', 'Exit', 'Status', 'Action'].map((h) => (
-                    <th key={h} className="text-left text-xs font-medium text-white/40 uppercase tracking-wider px-4 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-slate-50">
                 {visitors.map((v) => (
-                  <tr key={v._id} className="hover:bg-white/3 transition-colors">
+                  <tr key={v._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-white text-sm">{v.visitorName}</div>
-                      <div className="visitor-code text-gold text-xs">{v.visitorCode}</div>
+                      <div className="font-medium text-slate-900 text-sm">{v.visitorName}</div>
+                      <div className="visitor-code text-emerald-600 text-xs">{v.visitorCode}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-white/70">{v.hostResidentId?.name || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-white/70">{v.hostUnitId?.unitNumber || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-white/70 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-slate-600">{v.hostResidentId?.name || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{v.hostUnitId?.unitNumber || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">
                       {format(new Date(v.expectedDate), 'MMM d, p')}
                     </td>
-                    <td className="px-4 py-3 text-sm text-emerald-400">
+                    <td className="px-4 py-3 text-sm text-emerald-600 font-medium">
                       {v.entryTime ? format(new Date(v.entryTime), 'HH:mm') : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-blue-400">
+                    <td className="px-4 py-3 text-sm text-blue-600 font-medium">
                       {v.exitTime ? format(new Date(v.exitTime), 'HH:mm') : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -86,8 +86,8 @@ export default function SecurityLog() {
                           onClick={() => handleAction(v)}
                           className={`p-1.5 rounded-lg transition-all text-sm ${
                             v.status === 'active'
-                              ? 'hover:bg-emerald-500/20 text-white/40 hover:text-emerald-400'
-                              : 'hover:bg-blue-500/20 text-white/40 hover:text-blue-400'
+                              ? 'hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 border border-transparent hover:border-emerald-200'
+                              : 'hover:bg-blue-50 text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-200'
                           }`}
                         >
                           {v.status === 'active' ? <LogIn size={15} /> : <LogOut size={15} />}
