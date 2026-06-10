@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Menu, X, Shield, AlertTriangle, Megaphone, MapPin, Phone, User, Home, Zap, Volume2, VolumeX, QrCode, ClipboardList } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Menu, X, Shield, AlertTriangle, Megaphone, MapPin, Phone, User, Home, Zap, Volume2, VolumeX, QrCode, ClipboardList, LogOut } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import { playSiren } from '../../utils/sounds';
 
 // ── Popup ─────────────────────────────────────────────────────────────────────
@@ -155,6 +156,8 @@ export default function AppLayout({ children }) {
   const [queue, setQueue] = useState([]);
   const [muted, setMuted] = useState(false);
   const { subscribe } = useSocket() || {};
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const mutedRef = useRef(false);
 
   mutedRef.current = muted;
@@ -205,11 +208,17 @@ export default function AppLayout({ children }) {
         {/* Mobile topbar */}
         <header className="lg:hidden flex items-center gap-3 px-4 h-14 flex-shrink-0"
           style={{ background: '#060E1A', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 0 12px rgba(59,130,246,0.4)' }}>
-            <Shield size={16} className="text-white" />
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: 4, display: 'flex', flexShrink: 0 }}
+          >
+            <Menu size={22} />
+          </button>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 0 10px rgba(59,130,246,0.4)' }}>
+            <Shield size={14} className="text-white" />
           </div>
-          <span className="font-bold flex-1 text-base" style={{ letterSpacing: '-0.02em' }}>
+          <span className="font-bold flex-1 text-sm" style={{ letterSpacing: '-0.02em' }}>
             <span style={{ color: '#FFFFFF' }}>Area</span>
             <span style={{ color: '#3B82F6' }}>Connect</span>
             {' '}
@@ -252,6 +261,14 @@ export default function AppLayout({ children }) {
               )}
             </NavLink>
           ))}
+          <button
+            onClick={async () => { await logout(); navigate('/login'); }}
+            className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)' }}
+          >
+            <LogOut size={22} strokeWidth={1.8} />
+            <span className="text-[10px] font-semibold">Sign Out</span>
+          </button>
         </div>
       </nav>
 
