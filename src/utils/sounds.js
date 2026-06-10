@@ -51,7 +51,7 @@ export function playSound(type) {
 
 // Derive backend base URL from VITE_API_URL (strip trailing /api)
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
-const SIREN_URL = `${API_BASE}/public/dragon-studio-police-siren-397963.mp3`;
+const SIREN_URL = `${API_BASE}/public/engyclick-police-siren-sound-effect-317645.mp3`;
 
 let _sirenAudio = null;
 
