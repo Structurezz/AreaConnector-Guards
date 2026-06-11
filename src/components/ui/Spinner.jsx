@@ -66,6 +66,10 @@ export function LoadingScreen() {
       />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
+        Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      </p>
     </div>
   );
 }

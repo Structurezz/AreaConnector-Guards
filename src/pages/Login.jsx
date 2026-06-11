@@ -361,6 +361,9 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
             <Link to="/register" style={{ color: '#60A5FA', fontWeight: 600 }}>Sign up</Link>
           </p>
         </form>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
+          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+        </p>
       </div>
     </div>
   );
@@ -509,6 +512,9 @@ export default function Login() {
 
             <p className="text-center text-xs mt-10" style={{ color: '#CBD5E1' }}>
               © 2025 AreaConnect · Secure Estate Technology
+            </p>
+            <p className="text-[11px] text-slate-400 text-center mt-2 tracking-wide">
+              Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
             </p>
           </div>
         </div>

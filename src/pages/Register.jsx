@@ -131,6 +131,9 @@ function MobileRegister({ form, set, showPw, setShowPw, loading, error, handleSu
           Already have an account?{' '}
           <Link to="/login" style={{ color:'#60A5FA', fontWeight:600, textDecoration:'none' }}>Sign in</Link>
         </p>
+        <p style={{ textAlign:'center', marginTop:16, fontSize:11, color:'rgba(255,255,255,0.4)', letterSpacing:'0.04em' }}>
+          Powered by <span style={{ fontWeight:600, color:'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+        </p>
       </div>
     </div>
   );
@@ -245,6 +248,9 @@ export default function Register() {
                 <Link to="/login" style={{ color:'#3B82F6', fontWeight:600, textDecoration:'none' }}>Sign in</Link>
               </p>
             </form>
+            <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
+              Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+            </p>
           </div>
         </div>
       </div>
