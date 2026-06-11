@@ -7,20 +7,28 @@ import { FileText, LogIn, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
+import Pagination from '../components/ui/Pagination';
+
+const PAGE_SIZE = 20;
 
 export default function SecurityLog() {
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
-  const load = async () => {
+  const load = async (p = 1) => {
     setLoading(true);
     try {
-      const { data } = await visitorAPI.getAll({ limit: 50 });
+      const { data } = await visitorAPI.getAll({ page: p, limit: PAGE_SIZE });
       setVisitors(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch { toast.error('Failed to load'); } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  const handlePage = (p) => { setPage(p); load(p); };
+
+  useEffect(() => { load(1); }, []);
 
   const handleAction = async (v) => {
     try {
@@ -33,7 +41,7 @@ export default function SecurityLog() {
         playSound('click');
         toast.success('Checked out');
       }
-      load();
+      load(page);
     } catch (err) { playSound('error'); toast.error(err.response?.data?.message || 'Failed'); }
   };
 
@@ -101,6 +109,8 @@ export default function SecurityLog() {
           </div>
         )}
       </div>
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
     </div>
   );
 }
