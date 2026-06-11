@@ -8,21 +8,29 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
 import { playSound } from '../utils/sounds';
+import Pagination from '../components/ui/Pagination';
+
+const PAGE_SIZE = 15;
 
 export default function SecurityAlerts() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const { subscribe } = useSocket() || {};
 
-  const load = async () => {
+  const load = async (p = 1) => {
     setLoading(true);
     try {
-      const { data } = await alertAPI.getAll({ status: 'open' });
+      const { data } = await alertAPI.getAll({ status: 'open', page: p, limit: PAGE_SIZE });
       setAlerts(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  const handlePage = (p) => { setPage(p); load(p); };
+
+  useEffect(() => { load(1); }, []);
 
   useEffect(() => {
     if (!subscribe) return;
@@ -115,6 +123,8 @@ export default function SecurityAlerts() {
           ))}
         </div>
       )}
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
     </div>
   );
 }
