@@ -94,21 +94,23 @@ function syntheticSiren(loops = 5) {
   } catch {}
 }
 
-export function playSiren(loops = 5) {
-  // Use HTML Audio only — never AudioContext here, since this is called
-  // from socket events (not user gestures) and AudioContext requires a gesture.
+let _sirenTimer = null;
+
+export function stopSiren() {
   try {
+    clearTimeout(_sirenTimer);
+    const audio = getSirenAudio();
+    audio.pause();
+    audio.currentTime = 0;
+  } catch {}
+}
+
+export function playSiren(durationMs = 60000) {
+  try {
+    stopSiren();
     const audio = getSirenAudio();
     audio.currentTime = 0;
-    const played = audio.play();
-    if (played) {
-      played.catch(() => {
-        // Silently swallow — autoplay still blocked (user hasn't interacted yet)
-      });
-      // Stop after loops × 600ms to match alert cadence
-      setTimeout(() => {
-        try { audio.pause(); audio.currentTime = 0; } catch {}
-      }, loops * 600);
-    }
+    audio.play().catch(() => {});
+    _sirenTimer = setTimeout(() => stopSiren(), durationMs);
   } catch {}
 }

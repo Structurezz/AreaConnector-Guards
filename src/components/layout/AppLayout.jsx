@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
-import { playSiren } from '../../utils/sounds';
+import { playSiren, stopSiren } from '../../utils/sounds';
 
 // ── Popup ─────────────────────────────────────────────────────────────────────
 
@@ -163,7 +163,11 @@ export default function AppLayout({ children }) {
   mutedRef.current = muted;
 
   const handleDismiss = useCallback(() => {
-    setQueue((q) => q.slice(1));
+    setQueue((q) => {
+      const remaining = q.slice(1);
+      if (remaining.length === 0) stopSiren();
+      return remaining;
+    });
   }, []);
 
   const handleToggleMute = useCallback(() => setMuted((m) => !m), []);
