@@ -1,63 +1,75 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, Shield, AlertTriangle, Megaphone, MapPin, Phone, User, Home, Zap, Volume2, VolumeX, QrCode, ClipboardList, LogOut } from 'lucide-react';
+import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { playSiren, stopSiren } from '../../utils/sounds';
 
-// ── Popup ─────────────────────────────────────────────────────────────────────
-
-const TYPE_META = {
-  security:  { label: 'Security Threat',   color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200' },
-  fire:      { label: 'Fire Emergency',    color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
-  medical:   { label: 'Medical Emergency', color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200' },
-  noise:     { label: 'Noise Complaint',   color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200' },
-  other:     { label: 'Alert',             color: 'text-slate-500',  bg: 'bg-slate-50',  border: 'border-slate-200' },
+// ── Source badge config ───────────────────────────────────────────────────────
+const ROLE_CFG = {
+  security:      { label: 'Security Guard', Icon: Shield,      bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
+  resident:      { label: 'Resident',       Icon: UserRound,   bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
+  estate_manager:{ label: 'Estate Manager', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  super_admin:   { label: 'Estate Manager', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
 };
 
-const SEV_STYLE = {
-  critical: 'bg-red-50 text-red-700 border-red-200',
-  high:     'bg-orange-50 text-orange-700 border-orange-200',
-  medium:   'bg-amber-50 text-amber-700 border-amber-200',
-  low:      'bg-blue-50 text-blue-700 border-blue-200',
+const TYPE_META = {
+  security: { label: 'Security Threat',   barColor: '#EF4444' },
+  fire:     { label: 'Fire Emergency',    barColor: '#F97316' },
+  medical:  { label: 'Medical Emergency', barColor: '#3B82F6' },
+  noise:    { label: 'Noise Complaint',   barColor: '#F59E0B' },
+  other:    { label: 'Alert',             barColor: '#6B7280' },
 };
 
 function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
   const isBroadcast = alert.isEmergencyBroadcast;
-  const meta = TYPE_META[alert.type] || TYPE_META.other;
+  const role = alert.raisedByRole || alert.residentId?.role || 'resident';
+  const roleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  const RoleIcon = roleCfg.Icon;
+  const typeMeta = TYPE_META[alert.type] || TYPE_META.other;
   const sev = alert.severity || (isBroadcast ? 'high' : 'critical');
+  const name = alert.residentId?.name || 'Unknown';
+  const unit = alert.unitId
+    ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
+    : null;
+
+  const barColor = isBroadcast ? '#7C3AED' : typeMeta.barColor;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-5 pointer-events-none">
-      {/* dim backdrop */}
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm pointer-events-auto" onClick={onDismiss} />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={onDismiss} />
 
-      <div className={`relative pointer-events-auto w-full max-w-md rounded-2xl bg-white border ${meta.border}
-        shadow-2xl shadow-slate-900/15 overflow-hidden animate-slide-down animate-siren-pulse`}>
+      <div className="relative pointer-events-auto w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+        style={{ border: `2px solid ${barColor}30` }}>
 
-        {/* Top severity bar */}
-        <div className={`h-1.5 w-full ${
-          sev === 'critical' ? 'bg-red-500' :
-          sev === 'high'     ? 'bg-orange-500' :
-          sev === 'medium'   ? 'bg-amber-500' : 'bg-blue-500'
-        }`} />
+        {/* Top colour bar */}
+        <div style={{ height: 5, background: barColor, width: '100%' }} />
 
         <div className="p-5">
-          {/* Header row */}
+          {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.bg} border ${meta.border}`}>
-                {isBroadcast ? <Megaphone size={20} className="text-amber-500" /> : <AlertTriangle size={20} className={meta.color} />}
+              {/* Source role badge */}
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: roleCfg.bg, border: `1.5px solid ${roleCfg.border}` }}>
+                {isBroadcast
+                  ? <Radio size={20} style={{ color: '#7C3AED' }} />
+                  : <RoleIcon size={20} style={{ color: roleCfg.color }} />}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {isBroadcast
-                    ? <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Estate Broadcast</span>
-                    : <span className={`text-xs font-bold uppercase tracking-wider ${meta.color}`}>{meta.label}</span>
-                  }
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${SEV_STYLE[sev]}`}>{sev}</span>
+                  {/* Role chip */}
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                    style={{ background: isBroadcast ? '#F5F3FF' : roleCfg.bg, color: isBroadcast ? '#7C3AED' : roleCfg.color, border: `1px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}` }}>
+                    {isBroadcast ? 'Estate Broadcast' : roleCfg.label}
+                  </span>
+                  {/* Severity */}
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full border"
+                    style={{ background: sev === 'critical' ? '#FEF2F2' : sev === 'high' ? '#FFF7ED' : '#FEFCE8', color: sev === 'critical' ? '#B91C1C' : sev === 'high' ? '#C2410C' : '#92400E', borderColor: sev === 'critical' ? '#FECACA' : sev === 'high' ? '#FED7AA' : '#FDE68A' }}>
+                    {sev}
+                  </span>
                   {queueCount > 1 && (
                     <span className="text-xs font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">
                       +{queueCount - 1} more
@@ -65,7 +77,7 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
                   )}
                 </div>
                 <p className="text-slate-900 font-bold text-base mt-0.5 leading-tight">
-                  {alert.title || (isBroadcast ? 'Estate Broadcast' : `${meta.label} Raised`)}
+                  {alert.title || (isBroadcast ? 'Estate Emergency Broadcast' : `${typeMeta.label}`)}
                 </p>
               </div>
             </div>
@@ -83,30 +95,31 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
             </div>
           </div>
 
-          {/* Resident info (non-broadcast) */}
-          {!isBroadcast && (
-            <div className="flex items-center gap-4 mb-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold text-sm flex-shrink-0">
-                {alert.residentId?.name?.[0] || '?'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-900 font-semibold text-sm">{alert.residentId?.name || 'Unknown Resident'}</p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {alert.residentId?.phone && (
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
-                      <Phone size={10} />{alert.residentId.phone}
-                    </span>
-                  )}
-                  {alert.unitId && (
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
-                      <Home size={10} />
-                      {alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit {alert.unitId.unitNumber}
-                    </span>
-                  )}
-                </div>
+          {/* Raised by info */}
+          <div className="flex items-center gap-3 mb-3 p-3 rounded-xl"
+            style={{ background: isBroadcast ? '#F5F3FF' : roleCfg.bg, border: `1px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}` }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+              style={{ background: '#fff', border: `1.5px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}`, color: isBroadcast ? '#7C3AED' : roleCfg.color }}>
+              {name[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm" style={{ color: '#0F172A' }}>
+                {isBroadcast ? `Broadcast by ${roleCfg.label}` : `Raised by ${roleCfg.label}`}: <span style={{ color: isBroadcast ? '#7C3AED' : roleCfg.color }}>{name}</span>
+              </p>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                {unit && (
+                  <span className="flex items-center gap-1 text-xs" style={{ color: '#64748B' }}>
+                    <Home size={10} />{unit}
+                  </span>
+                )}
+                {alert.residentId?.phone && (
+                  <a href={`tel:${alert.residentId.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#3B82F6' }}>
+                    <Phone size={10} />{alert.residentId.phone}
+                  </a>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Message */}
           {alert.note && (
@@ -115,7 +128,7 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
             </p>
           )}
 
-          {/* Meta fields */}
+          {/* Location / action */}
           <div className="space-y-1.5 mb-4">
             {alert.location && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -136,12 +149,9 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
           </div>
 
           <button onClick={onDismiss}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all border ${
-              isBroadcast
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
-                : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-            }`}>
-            {queueCount > 1 ? `Acknowledge & See Next (${queueCount - 1} remaining)` : 'Acknowledge'}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all border"
+            style={{ background: `${barColor}10`, color: barColor, borderColor: `${barColor}40` }}>
+            {queueCount > 1 ? `Acknowledge & See Next (${queueCount - 1} remaining)` : 'Acknowledge & Dismiss'}
           </button>
         </div>
       </div>
@@ -176,7 +186,7 @@ export default function AppLayout({ children }) {
     if (!subscribe) return;
     const unsub = subscribe('new_alert', (alert) => {
       setQueue((q) => [...q, alert]);
-      if (!mutedRef.current) playSiren(5);
+      if (!mutedRef.current) playSiren();
     });
     return unsub;
   }, [subscribe]);
