@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { alertAPI } from '../api';
 import Badge, { alertTypeBadge, alertStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
-import { Bell, CheckCircle, Radio, X, MapPin, Zap, Phone } from 'lucide-react';
+import { Bell, CheckCircle, Radio, X, MapPin, Zap, Phone, Users, Shield, Briefcase, UserCog } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
@@ -42,8 +42,22 @@ function RaisedByBadge({ alert }) {
   );
 }
 
+const AUDIENCE_OPTIONS = [
+  { value: 'all',            label: 'Everyone',       sub: 'All residents + staff', Icon: Users },
+  { value: 'staff',          label: 'Staff only',     sub: 'Estate manager + security', Icon: Briefcase },
+  { value: 'estate_manager', label: 'Estate Manager', sub: 'Managers only', Icon: UserCog },
+  { value: 'security',       label: 'Security only',  sub: 'Security team only', Icon: Shield },
+];
+
+const AUDIENCE_LABELS = {
+  all: 'all residents + staff',
+  staff: 'estate manager + security',
+  estate_manager: 'estate managers',
+  security: 'security team',
+};
+
 function BroadcastModal({ onClose }) {
-  const [form, setForm] = useState({ title: '', note: '', type: 'security', severity: 'high', location: '', actionRequired: '', contactNumber: '' });
+  const [form, setForm] = useState({ title: '', note: '', type: 'security', severity: 'high', location: '', actionRequired: '', contactNumber: '', audience: 'all' });
   const [sending, setSending] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -53,7 +67,7 @@ function BroadcastModal({ onClose }) {
     setSending(true);
     try {
       await alertAPI.broadcast(form);
-      toast.success('Emergency broadcast sent to all residents');
+      toast.success(`Alert sent to ${AUDIENCE_LABELS[form.audience] || 'recipients'}`);
       onClose();
     } catch { toast.error('Broadcast failed. Try again.'); }
     finally { setSending(false); }
@@ -71,13 +85,40 @@ function BroadcastModal({ onClose }) {
             </div>
             <div>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Security Broadcast</div>
-              <div style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>Alert All Residents</div>
+              <div style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>Send Alert</div>
             </div>
           </div>
         </div>
 
         {/* Form */}
         <div style={{ padding: '18px 20px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Send to</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {AUDIENCE_OPTIONS.map(({ value, label, sub, Icon }) => {
+                const active = form.audience === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => set('audience', value)}
+                    style={{
+                      textAlign: 'left', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                      border: `1.5px solid ${active ? '#7C3AED' : '#E2E8F0'}`,
+                      background: active ? 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(220,38,38,0.05))' : '#F8FAFC',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                    <Icon size={16} color={active ? '#7C3AED' : '#64748B'} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#7C3AED' : '#0F172A' }}>{label}</div>
+                      <div style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>{sub}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Type</label>
@@ -140,7 +181,7 @@ function BroadcastModal({ onClose }) {
             </button>
             <button onClick={handleSend} disabled={sending}
               style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #7C3AED, #DC2626)', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
-              {sending ? 'Broadcasting…' : '📡 Broadcast to All Residents'}
+              {sending ? 'Sending…' : `📡 Send to ${AUDIENCE_LABELS[form.audience]}`}
             </button>
           </div>
         </div>

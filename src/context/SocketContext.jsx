@@ -27,7 +27,7 @@ export const SocketProvider = ({ children }) => {
     socket.on('connect', () => {
       setConnected(true);
       const estateId = user.estateId?._id || user.estateId;
-      socket.emit('join', { userId: user._id, estateId });
+      socket.emit('join', { userId: user._id, estateId, role: user.role });
     });
 
     socket.on('disconnect', () => setConnected(false));
