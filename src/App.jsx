@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import SecurityDashboard from './pages/Dashboard';
 import SecurityLog from './pages/Log';
 import SecurityAlerts from './pages/Alerts';
+import SecuritySettings from './pages/Settings';
 
 function RequireSecurity({ children }) {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ function AppRoutes() {
       <Route path="/verify" element={<RequireSecurity><SecurityDashboard /></RequireSecurity>} />
       <Route path="/log" element={<RequireSecurity><SecurityLog /></RequireSecurity>} />
       <Route path="/alerts" element={<RequireSecurity><SecurityAlerts /></RequireSecurity>} />
+      <Route path="/settings" element={<RequireSecurity><SecuritySettings /></RequireSecurity>} />
       <Route path="/" element={<Navigate to="/verify" replace />} />
       <Route path="*" element={<Navigate to="/verify" replace />} />
     </Routes>

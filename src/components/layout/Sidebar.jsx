@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { QrCode, ClipboardList, Shield, LogOut } from 'lucide-react';
+import { QrCode, ClipboardList, Shield, LogOut, Settings as SettingsIcon } from 'lucide-react';
 
 const links = [
   { to: '/verify', icon: QrCode, label: 'Verify Visitor' },
   { to: '/log', icon: ClipboardList, label: 'Entry Log' },
   { to: '/alerts', icon: Shield, label: 'Live Alerts' },
+  { to: '/settings', icon: SettingsIcon, label: 'Settings' },
 ];
 
 const activeStyle = {
@@ -199,26 +200,38 @@ export default function Sidebar({ mobile = false, onClose }) {
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <Link
+          to="/settings"
+          onClick={onClose}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, textDecoration: 'none', padding: 4, borderRadius: 10 }}
+        >
           {/* Avatar */}
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              background: 'rgba(59,130,246,0.15)',
-              border: '1px solid rgba(59,130,246,0.25)',
-              color: '#60A5FA',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 14,
-              flexShrink: 0,
-            }}
-          >
-            {user?.name?.[0]?.toUpperCase()}
-          </div>
+          {user?.profilePhoto ? (
+            <img
+              src={user.profilePhoto}
+              alt=""
+              style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(59,130,246,0.30)' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: 'rgba(59,130,246,0.15)',
+                border: '1px solid rgba(59,130,246,0.25)',
+                color: '#60A5FA',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: 14,
+                flexShrink: 0,
+              }}
+            >
+              {user?.name?.[0]?.toUpperCase()}
+            </div>
+          )}
 
           {/* Name + email */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -246,7 +259,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               {user?.email}
             </div>
           </div>
-        </div>
+        </Link>
 
         <SignOutButton
           onClick={async () => {
