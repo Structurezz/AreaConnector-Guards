@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { visitorAPI } from '../api';
+import { useEffect, useState } from 'react';
+import { visitorAPI, estateAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import {
   QrCode, Search, CheckCircle, XCircle,
   LogIn, LogOut, AlertTriangle, User,
-  Phone, Home, Calendar, Clock, Shield
+  Phone, Home, Calendar, Clock, Shield, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import { format } from 'date-fns';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
   const isActive      = visitor.status === 'active';
@@ -103,11 +106,21 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
 }
 
 export default function SecurityDashboard() {
+  const { user } = useAuth();
   const [code, setCode]           = useState('');
   const [visitor, setVisitor]     = useState(null);
   const [state, setState]         = useState(null);
   const [loading, setLoading]     = useState(false);
   const [sessionLog, setSessionLog] = useState([]);
+  const [constitution, setConstitution] = useState(null);
+
+  const estateId = user?.estateId?._id || user?.estateId;
+  useEffect(() => {
+    if (!estateId) return;
+    estateAPI.getConstitutionMeta(estateId)
+      .then(({ data }) => setConstitution(data.data))
+      .catch(() => setConstitution(null));
+  }, [estateId]);
 
   const handleVerify = async (e) => {
     e?.preventDefault();
@@ -182,6 +195,27 @@ export default function SecurityDashboard() {
           </div>
         </div>
       </div>
+
+      {constitution?.hasConstitution && (
+        <a
+          href={`${API_BASE}${estateAPI.constitutionFileUrl(estateId)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl no-underline"
+          style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+               style={{ background: 'rgba(236,72,153,0.10)' }}>
+            <FileText size={16} style={{ color: '#EC4899' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>Estate Constitution</div>
+            <div className="text-xs" style={{ color: '#64748B' }}>
+              {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Reference for gate policy
+            </div>
+          </div>
+          <div className="text-xs font-semibold" style={{ color: '#EC4899' }}>View →</div>
+        </a>
+      )}
 
       {/* Code input */}
       <div className="glass-card p-6">
