@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { visitorAPI, estateAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import {
   QrCode, Search, CheckCircle, XCircle, Camera,
   LogIn, LogOut, AlertTriangle, User,
-  Phone, Home, Calendar, Shield, FileText, Sparkles,
+  Phone, Home, Calendar, Shield, FileText, Sparkles, Clock, Hourglass,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
@@ -187,8 +188,14 @@ export default function SecurityDashboard() {
     try {
       const { data } = await visitorAPI.verify(trimmed);
       setVisitor(data.data);
-      setState('found');
-      playSound('click');
+      if (data.state === 'early_arrival') {
+        setState('early_arrival');
+        toast(`Visitor is ${data.minsEarly} min early — the host has been pinged.`, { icon: '⏳', duration: 5000 });
+        playSound('click');
+      } else {
+        setState('found');
+        playSound('click');
+      }
     } catch (err) {
       const status = err.response?.status;
       if (status === 404) { playSound('error'); setState('not_found'); }
@@ -196,6 +203,23 @@ export default function SecurityDashboard() {
       else { playSound('error'); setState('not_found'); toast.error('Verification failed'); }
     } finally { setLoading(false); }
   };
+
+  // Listen for the host approving an early entry — auto-flip to the normal flow
+  const { subscribe } = useSocket() || {};
+  const visitorIdRef = useRef(null);
+  useEffect(() => { visitorIdRef.current = visitor?._id?.toString() || null; }, [visitor?._id]);
+  useEffect(() => {
+    if (!subscribe) return;
+    const unsub = subscribe('visitor_early_approved', (payload) => {
+      const current = visitorIdRef.current;
+      if (!current || payload?.visitorId?.toString() !== current) return;
+      playSound('checkin');
+      toast.success(`${payload.visitorName} approved by ${payload.approvedBy || 'the host'} — ready to check in.`, { duration: 6000 });
+      setVisitor(payload.visitor || ((v) => v ? { ...v, earlyEntryApproved: true } : v));
+      setState('found');
+    });
+    return unsub;
+  }, [subscribe]);
 
   const handleVerifySubmit = (e) => {
     e?.preventDefault();
@@ -416,6 +440,70 @@ export default function SecurityDashboard() {
             This visitor has been blacklisted by estate management.
           </div>
           <button onClick={reset} className="btn-outline w-full text-sm">Clear</button>
+        </div>
+      )}
+
+      {/* EARLY ARRIVAL — waiting for host */}
+      {state === 'early_arrival' && visitor && (
+        <div className="glass-card p-5 animate-fade-in overflow-hidden relative"
+          style={{ border: '1px solid #FDE68A', background: '#FFFBEB' }}>
+          <span className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle at top right, rgba(245,158,11,0.14), transparent 65%)' }} />
+          <div className="relative">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(245,158,11,0.14)' }}>
+                <Hourglass size={20} style={{ color: '#B45309' }} className="animate-pulse" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#B45309' }}>
+                  Early arrival · waiting
+                </div>
+                <div className="text-base font-black mt-0.5" style={{ color: '#0F172A' }}>
+                  {visitor.visitorName}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                  Expected {format(new Date(visitor.expectedDate), 'h:mm a')} · {visitor.purpose}
+                </div>
+              </div>
+            </div>
+
+            {/* Host info */}
+            <div className="rounded-xl p-3 mb-3 flex items-center gap-3"
+              style={{ background: '#fff', border: '1px solid rgba(245,158,11,0.20)' }}>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
+                style={{ background: 'rgba(59,130,246,0.10)', color: '#1D4ED8' }}>
+                {(visitor.hostResidentId?.name || '?')[0]?.toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#64748B' }}>
+                  Pinged host
+                </div>
+                <div className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>
+                  {visitor.hostResidentId?.name || 'Host'}
+                  {visitor.hostUnitId?.unitNumber ? ` · Unit ${visitor.hostUnitId.unitNumber}` : ''}
+                </div>
+              </div>
+              {visitor.hostResidentId?.phone && (
+                <a href={`tel:${visitor.hostResidentId.phone}`}
+                  className="text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+                  style={{ background: 'rgba(59,130,246,0.10)', color: '#1D4ED8', textDecoration: 'none' }}>
+                  <Phone size={11} /> Call
+                </a>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-xs mb-4" style={{ color: '#92400E' }}>
+              <Clock size={12} />
+              <span className="font-semibold">Awaiting approval. This screen will auto-advance when the resident taps Allow.</span>
+            </div>
+
+            <button onClick={reset}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
