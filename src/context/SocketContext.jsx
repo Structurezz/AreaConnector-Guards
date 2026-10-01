@@ -9,8 +9,15 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
 
+  // Stable primitives — avoid re-running the effect every fetchMe refresh,
+  // which was killing the WebSocket upgrade mid-handshake.
+  const userId = user?._id || null;
+  const estateId =
+    (typeof user?.estateId === 'object' ? user?.estateId?._id : user?.estateId) || null;
+  const role = user?.role || null;
+
   useEffect(() => {
-    if (!user?._id) return;
+    if (!userId) return;
 
     const socketUrl =
       import.meta.env.VITE_SOCKET_URL ||
@@ -26,8 +33,7 @@ export const SocketProvider = ({ children }) => {
 
     socket.on('connect', () => {
       setConnected(true);
-      const estateId = user.estateId?._id || user.estateId;
-      socket.emit('join', { userId: user._id, estateId, role: user.role });
+      socket.emit('join', { userId, estateId, role });
     });
 
     socket.on('disconnect', () => setConnected(false));
@@ -37,7 +43,7 @@ export const SocketProvider = ({ children }) => {
       socketRef.current = null;
       setConnected(false);
     };
-  }, [user?._id, user?.estateId]);
+  }, [userId, estateId, role]);
 
   const subscribe = useCallback((event, handler) => {
     socketRef.current?.on(event, handler);
