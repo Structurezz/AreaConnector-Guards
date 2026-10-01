@@ -22,11 +22,22 @@ function RaisedByBadge({ alert }) {
   const role = alert.raisedByRole || alert.residentId?.role || 'resident';
   const cfg = ROLE_COLORS[role] || ROLE_COLORS.resident;
   const name = alert.residentId?.name || '—';
+  const photo = alert.residentId?.profilePhoto;
   const unit = alert.unitId
     ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
     : null;
   return (
     <div className="flex items-center gap-2 mt-1 flex-wrap">
+      {photo ? (
+        <img src={photo} alt=""
+          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+          style={{ border: `1px solid ${cfg.color}33` }} />
+      ) : (
+        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0"
+          style={{ background: cfg.bg, color: cfg.color }}>
+          {(name || '?')[0]?.toUpperCase()}
+        </div>
+      )}
       <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
         style={{ background: cfg.bg, color: cfg.color }}>
         {cfg.label}
