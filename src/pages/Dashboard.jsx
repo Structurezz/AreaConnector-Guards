@@ -1,17 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { visitorAPI, estateAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import {
-  QrCode, Search, CheckCircle, XCircle,
+  QrCode, Search, CheckCircle, XCircle, Camera,
   LogIn, LogOut, AlertTriangle, User,
-  Phone, Home, Calendar, Clock, Shield, FileText
+  Phone, Home, Calendar, Shield, FileText, Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import { format } from 'date-fns';
+import QrScanner from '../components/QrScanner';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Extract a 6-char access code from arbitrary scanned text.
+// We accept raw codes (ABC123), or any string containing one.
+function extractCode(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim().toUpperCase();
+  if (/^[A-Z0-9]{3,10}$/.test(s)) return s;
+  const match = s.match(/[A-Z0-9]{6}/);
+  return match ? match[0] : s.slice(0, 6);
+}
 
 function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
   const isActive      = visitor.status === 'active';
@@ -20,20 +31,36 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
   const isBlacklisted = visitor.status === 'blacklisted';
 
   return (
-    <div className={`glass-card p-6 animate-fade-in ${isBlacklisted ? '' : ''}`}
+    <div className="glass-card p-5 sm:p-6 animate-fade-in overflow-hidden relative"
       style={isBlacklisted ? { border: '1px solid #FCA5A5', background: '#FEF2F2' } : {}}>
+      {!isBlacklisted && (
+        <span className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle at top right, rgba(59,130,246,0.14), transparent 65%)' }} />
+      )}
 
       {/* Header */}
-      <div className="flex items-start gap-4 mb-5">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold flex-shrink-0"
-          style={{ background: 'rgba(59,130,246,0.10)', border: '2px solid rgba(59,130,246,0.20)', color: '#2563EB' }}>
-          {visitor.visitorName[0]}
-        </div>
+      <div className="relative flex items-start gap-4 mb-5">
+        {visitor.visitorPhoto ? (
+          <img src={visitor.visitorPhoto} alt=""
+            className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
+            style={{ border: '2px solid rgba(59,130,246,0.25)' }} />
+        ) : (
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(59,130,246,0.18), rgba(37,99,235,0.08))',
+              border: '2px solid rgba(59,130,246,0.25)',
+              color: '#1D4ED8',
+            }}>
+            {visitor.visitorName[0]}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold mb-0.5" style={{ color: '#0F172A' }}>{visitor.visitorName}</h2>
+          <h2 className="text-lg sm:text-xl font-black truncate" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+            {visitor.visitorName}
+          </h2>
           {visitor.visitorPhone && (
             <a href={`tel:${visitor.visitorPhone}`}
-              className="flex items-center gap-1.5 text-sm mt-0.5 transition-colors"
+              className="flex items-center gap-1.5 text-sm mt-1 transition-colors"
               style={{ color: '#64748B' }}
               onMouseEnter={e => e.currentTarget.style.color = '#2563EB'}
               onMouseLeave={e => e.currentTarget.style.color = '#64748B'}>
@@ -45,57 +72,72 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
       </div>
 
       {/* Info grid */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="relative grid grid-cols-2 gap-2.5 mb-5">
         {[
           { icon: User,     label: 'Purpose',    value: visitor.purpose },
           { icon: Home,     label: 'Host Unit',  value: visitor.hostUnitId?.unitNumber ? `Unit ${visitor.hostUnitId.unitNumber}${visitor.hostUnitId.block ? ` · Block ${visitor.hostUnitId.block}` : ''}` : visitor.hostResidentId?.name || '—' },
           { icon: Calendar, label: 'Expected',   value: format(new Date(visitor.expectedDate), 'MMM d, yyyy'), sub: format(new Date(visitor.expectedDate), 'p') },
           { icon: User,     label: 'Invited by', value: visitor.hostResidentId?.name || '—' },
         ].map(({ icon: Icon, label, value, sub }) => (
-          <div key={label} className="rounded-xl p-3" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#94A3B8' }}>
+          <div key={label} className="rounded-xl p-2.5 sm:p-3"
+            style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.05)' }}>
+            <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider mb-1"
+              style={{ color: '#94A3B8' }}>
               <Icon size={10} /> {label}
             </div>
-            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{value}</div>
-            {sub && <div className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{sub}</div>}
+            <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{value}</div>
+            {sub && <div className="text-[11px] mt-0.5" style={{ color: '#94A3B8' }}>{sub}</div>}
           </div>
         ))}
         {visitor.entryTime && (
-          <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.18)' }}>
-            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#059669' }}>
+          <div className="rounded-xl p-2.5 sm:p-3"
+            style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.20)' }}>
+            <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#059669' }}>
               <LogIn size={10} /> Checked In
             </div>
-            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{format(new Date(visitor.entryTime), 'p')}</div>
+            <div className="text-sm font-bold" style={{ color: '#0F172A' }}>{format(new Date(visitor.entryTime), 'p')}</div>
           </div>
         )}
         {visitor.exitTime && (
-          <div className="rounded-xl p-3" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)' }}>
-            <div className="flex items-center gap-1 text-xs mb-1" style={{ color: '#2563EB' }}>
+          <div className="rounded-xl p-2.5 sm:p-3"
+            style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}>
+            <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#2563EB' }}>
               <LogOut size={10} /> Checked Out
             </div>
-            <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{format(new Date(visitor.exitTime), 'p')}</div>
+            <div className="text-sm font-bold" style={{ color: '#0F172A' }}>{format(new Date(visitor.exitTime), 'p')}</div>
           </div>
         )}
       </div>
 
       {isBlacklisted && (
-        <div className="flex items-center gap-3 p-4 rounded-xl font-bold"
+        <div className="relative flex items-center gap-3 p-4 rounded-xl font-bold"
           style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C' }}>
           <AlertTriangle size={20} /> ACCESS DENIED — This visitor is blacklisted
         </div>
       )}
       {isActive && (
-        <button onClick={onCheckIn} className="btn-primary w-full gap-2 py-3.5 text-base">
+        <button onClick={onCheckIn}
+          className="relative w-full py-3.5 rounded-xl font-bold text-white text-base flex items-center justify-center gap-2 transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #10B981, #059669)',
+            boxShadow: '0 10px 24px -8px rgba(16,185,129,0.55)',
+          }}>
           <LogIn size={20} /> Check In Visitor
         </button>
       )}
       {isIn && (
-        <button onClick={onCheckOut} className="btn-outline w-full gap-2 py-3.5 text-base">
+        <button onClick={onCheckOut}
+          className="relative w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all"
+          style={{
+            background: '#F1F5F9',
+            color: '#1D4ED8',
+            border: '1.5px solid rgba(59,130,246,0.30)',
+          }}>
           <LogOut size={20} /> Check Out Visitor
         </button>
       )}
       {isDone && (
-        <div className="flex items-center justify-center gap-2 p-3.5 rounded-xl"
+        <div className="relative flex items-center justify-center gap-2 p-3.5 rounded-xl"
           style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#64748B' }}>
           <CheckCircle size={18} style={{ color: '#10B981' }} />
           Visitor has already checked out
@@ -107,12 +149,14 @@ function VisitorResultCard({ visitor, onCheckIn, onCheckOut }) {
 
 export default function SecurityDashboard() {
   const { user } = useAuth();
-  const [code, setCode]           = useState('');
-  const [visitor, setVisitor]     = useState(null);
-  const [state, setState]         = useState(null);
-  const [loading, setLoading]     = useState(false);
+  const [code, setCode]             = useState('');
+  const [visitor, setVisitor]       = useState(null);
+  const [state, setState]           = useState(null);
+  const [loading, setLoading]       = useState(false);
   const [sessionLog, setSessionLog] = useState([]);
   const [constitution, setConstitution] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerBusy, setScannerBusy] = useState(false);
 
   const estateId = user?.estateId?._id || user?.estateId;
   useEffect(() => {
@@ -122,10 +166,21 @@ export default function SecurityDashboard() {
       .catch(() => setConstitution(null));
   }, [estateId]);
 
-  const handleVerify = async (e) => {
-    e?.preventDefault();
-    const trimmed = code.trim().toUpperCase();
+  const firstName = user?.name?.split(' ')[0] || 'Guard';
+
+  const stats = useMemo(() => {
+    let ins = 0, outs = 0;
+    for (const l of sessionLog) {
+      if (l.action === 'Check In')  ins++;
+      if (l.action === 'Check Out') outs++;
+    }
+    return { ins, outs, total: sessionLog.length };
+  }, [sessionLog]);
+
+  const verifyCode = async (raw) => {
+    const trimmed = extractCode(raw);
     if (!trimmed) return;
+    setCode(trimmed);
     setLoading(true);
     setVisitor(null);
     setState(null);
@@ -140,6 +195,22 @@ export default function SecurityDashboard() {
       else if (status === 403) { playSound('error'); setVisitor(err.response?.data?.data); setState('blacklisted'); }
       else { playSound('error'); setState('not_found'); toast.error('Verification failed'); }
     } finally { setLoading(false); }
+  };
+
+  const handleVerifySubmit = (e) => {
+    e?.preventDefault();
+    verifyCode(code);
+  };
+
+  const handleScanResult = async (text) => {
+    if (scannerBusy) return;
+    setScannerBusy(true);
+    setShowScanner(false);
+    try {
+      await verifyCode(text);
+    } finally {
+      setTimeout(() => setScannerBusy(false), 500);
+    }
   };
 
   const handleCheckIn = async () => {
@@ -165,100 +236,150 @@ export default function SecurityDashboard() {
   const reset = () => { setCode(''); setVisitor(null); setState(null); };
 
   return (
-    <div className="max-w-lg mx-auto space-y-5 animate-fade-in">
+    <div className="max-w-lg mx-auto space-y-4 sm:space-y-5 animate-fade-in">
 
-      {/* ── Hero ── */}
+      {/* ── Modern Hero ── */}
       <div
-        className="relative overflow-hidden rounded-2xl p-6 text-center"
-        style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 60%, #1D4ED8 100%)' }}
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-6"
+        style={{
+          background:
+            'radial-gradient(110% 80% at 100% 0%, #60A5FA 0%, transparent 55%),' +
+            'radial-gradient(90% 80% at 0% 100%, #1E40AF 0%, transparent 60%),' +
+            'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+          boxShadow: '0 20px 44px -18px rgba(29,78,216,0.55), 0 10px 22px -12px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+        }}
       >
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
-          style={{ background: 'rgba(255,255,255,0.07)' }} />
-        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full pointer-events-none"
-          style={{ background: 'rgba(255,255,255,0.05)' }} />
+        {/* Mesh */}
+        <div className="absolute inset-0 opacity-[0.15] pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+            maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
+            WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 75%)',
+          }} />
+        <div className="absolute -top-14 -right-10 w-52 h-52 rounded-full pointer-events-none blur-2xl"
+          style={{ background: 'rgba(191,219,254,0.35)' }} />
+        <div className="absolute -bottom-16 -left-10 w-52 h-52 rounded-full pointer-events-none blur-2xl"
+          style={{ background: 'rgba(30,64,175,0.55)' }} />
 
         <div className="relative">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(255,255,255,0.20)', border: '1px solid rgba(255,255,255,0.30)' }}>
-            <Shield size={28} className="text-white" />
+          {/* Pills row */}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}>
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inset-0 rounded-full bg-blue-200 animate-ping opacity-75" />
+                <span className="relative w-1.5 h-1.5 rounded-full bg-white" />
+              </span>
+              On duty
+            </span>
+            <span className="inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.95)', border: '1px solid rgba(255,255,255,0.20)' }}>
+              {format(new Date(), 'EEE, HH:mm')}
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1" style={{ letterSpacing: '-0.02em' }}>
-            Gate Security
+          {/* Greeting */}
+          <h1 className="text-white font-black" style={{ letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+            <span className="hidden sm:block text-xs font-semibold uppercase tracking-widest mb-1"
+              style={{ color: 'rgba(255,255,255,0.72)', letterSpacing: '0.14em' }}>
+              Gate security
+            </span>
+            <span className="block text-xl sm:text-4xl">
+              <span className="sm:hidden">Hi, </span>{firstName}
+            </span>
           </h1>
-          <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.75)' }}>
-            Visitor access verification terminal
+          <p className="text-[11px] sm:text-sm mt-1 flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            <Sparkles size={11} style={{ color: '#BFDBFE' }} />
+            <span className="truncate">
+              {sessionLog.length > 0 ? `${stats.ins} in · ${stats.outs} out this session` : 'Scan or type a code to begin'}
+            </span>
           </p>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.95)' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
-            {format(new Date(), 'EEEE · HH:mm')}
-          </div>
         </div>
       </div>
 
-      {constitution?.hasConstitution && (
-        <a
-          href={`${API_BASE}${estateAPI.constitutionFileUrl(estateId)}`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl no-underline"
-          style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-               style={{ background: 'rgba(236,72,153,0.10)' }}>
-            <FileText size={16} style={{ color: '#EC4899' }} />
+      {/* ── Scanner card — primary action ── */}
+      <div className="glass-card overflow-hidden">
+        <button
+          onClick={() => setShowScanner(true)}
+          className="w-full p-5 sm:p-6 flex items-center gap-4 text-left transition-all active:scale-[0.99]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(37,99,235,0.03))',
+          }}>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-white"
+            style={{
+              background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+              boxShadow: '0 10px 24px -8px rgba(37,99,235,0.55)',
+            }}>
+            <QrCode size={26} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>Estate Constitution</div>
-            <div className="text-xs" style={{ color: '#64748B' }}>
-              {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Reference for gate policy
+            <div className="text-xs font-bold uppercase tracking-wider" style={{ color: '#1D4ED8' }}>
+              Scan QR
+            </div>
+            <div className="text-base sm:text-lg font-black" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+              Scan Visitor Pass
+            </div>
+            <div className="text-[11px] mt-0.5" style={{ color: '#64748B' }}>
+              Opens the camera · fastest way to verify
             </div>
           </div>
-          <div className="text-xs font-semibold" style={{ color: '#EC4899' }}>View →</div>
-        </a>
-      )}
+          <Camera size={18} style={{ color: '#94A3B8' }} />
+        </button>
 
-      {/* Code input */}
-      <div className="glass-card p-6">
-        <form onSubmit={handleVerify} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block text-center" style={{ color: '#475569' }}>
-              Visitor Access Code
-            </label>
-            <div className="relative">
-              <QrCode size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
-              <input
-                className="input-field text-center text-2xl tracking-[0.4em] uppercase pl-10 py-4 visitor-code"
-                placeholder="ABC123"
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value.toUpperCase().slice(0, 6));
-                  if (state) setState(null);
-                  if (visitor) setVisitor(null);
-                }}
-                maxLength={6}
-                autoFocus
-                autoComplete="off"
-                disabled={loading}
-              />
-            </div>
+        {/* Divider with "or" */}
+        <div className="relative flex items-center gap-3 px-5 py-3" style={{ borderTop: '1px solid rgba(15,23,42,0.05)', background: '#fff' }}>
+          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+            Or enter manually
+          </span>
+          <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+        </div>
+
+        {/* Manual input */}
+        <form onSubmit={handleVerifySubmit} className="p-5 pt-3 space-y-3" style={{ background: '#fff' }}>
+          <div className="relative">
+            <input
+              className="w-full py-3.5 px-4 rounded-xl text-center font-mono text-xl sm:text-2xl tracking-[0.4em] uppercase outline-none transition-all"
+              style={{
+                background: '#F8FAFC',
+                border: `2px solid ${state === 'not_found' ? '#FCA5A5' : state === 'blacklisted' ? '#FCA5A5' : state === 'found' ? '#86EFAC' : '#E2E8F0'}`,
+                color: '#0F172A',
+              }}
+              placeholder="ABC123"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase().slice(0, 6));
+                if (state) setState(null);
+                if (visitor) setVisitor(null);
+              }}
+              maxLength={6}
+              autoComplete="off"
+              disabled={loading}
+            />
           </div>
+
+          {/* Code progress */}
+          <div className="flex justify-center gap-1.5">
+            {[...Array(6)].map((_, i) => (
+              <div key={i}
+                className="w-5 h-1.5 rounded-full transition-all"
+                style={{ background: i < code.length ? '#2563EB' : '#E2E8F0' }} />
+            ))}
+          </div>
+
           <button
             type="submit"
             disabled={loading || code.trim().length < 3}
-            className="btn-primary w-full py-3.5 text-base gap-2">
-            <Search size={18} />
-            {loading ? 'Verifying...' : 'Verify Code'}
+            className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            style={{
+              background: '#F1F5F9',
+              color: '#1D4ED8',
+              border: '1.5px solid rgba(59,130,246,0.25)',
+            }}>
+            <Search size={16} />
+            {loading ? 'Verifying…' : 'Verify Code'}
           </button>
         </form>
-
-        {/* Code progress */}
-        <div className="flex justify-center gap-1.5 mt-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i}
-              className="w-5 h-1.5 rounded-full transition-all"
-              style={{ background: i < code.length ? '#3B82F6' : '#E2E8F0' }} />
-          ))}
-        </div>
       </div>
 
       {/* NOT FOUND */}
@@ -266,11 +387,14 @@ export default function SecurityDashboard() {
         <div className="glass-card p-5 animate-fade-in"
           style={{ border: '1px solid #FECACA', background: '#FEF2F2' }}>
           <div className="flex items-center gap-3 mb-3">
-            <XCircle size={24} style={{ color: '#EF4444', flexShrink: 0 }} />
-            <div>
-              <div className="font-bold" style={{ color: '#B91C1C' }}>Invalid Access Code</div>
-              <div className="text-sm" style={{ color: '#64748B' }}>
-                No visitor pass found for <span className="font-mono" style={{ color: '#0F172A' }}>{code}</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(239,68,68,0.14)' }}>
+              <XCircle size={20} style={{ color: '#EF4444' }} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-black text-sm" style={{ color: '#B91C1C' }}>Invalid Access Code</div>
+              <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                No visitor pass found for <span className="font-mono font-bold" style={{ color: '#0F172A' }}>{code}</span>
               </div>
             </div>
           </div>
@@ -284,9 +408,9 @@ export default function SecurityDashboard() {
           style={{ border: '1px solid #FCA5A5', background: '#FEF2F2' }}>
           <div className="flex items-center gap-3 mb-2" style={{ color: '#B91C1C' }}>
             <AlertTriangle size={22} />
-            <span className="font-bold text-lg">ACCESS DENIED</span>
+            <span className="font-black text-lg">ACCESS DENIED</span>
           </div>
-          <div className="font-semibold mb-0.5" style={{ color: '#0F172A' }}>{visitor?.visitorName}</div>
+          <div className="font-bold mb-0.5" style={{ color: '#0F172A' }}>{visitor?.visitorName}</div>
           <div className="text-sm mb-3" style={{ color: '#64748B' }}>{visitor?.purpose}</div>
           <div className="text-sm font-medium mb-4" style={{ color: '#DC2626' }}>
             This visitor has been blacklisted by estate management.
@@ -299,34 +423,81 @@ export default function SecurityDashboard() {
       {state === 'found' && visitor && (
         <>
           <VisitorResultCard visitor={visitor} onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} />
-          <button onClick={reset} className="btn-outline w-full text-sm">
+          <button onClick={reset}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0' }}>
             Verify Another Visitor
           </button>
         </>
       )}
 
-      {/* Session log */}
+      {/* Session log — modern */}
       {sessionLog.length > 0 && (
-        <div className="glass-card p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#94A3B8' }}>
-            This Session
-          </h2>
-          <div className="space-y-2">
+        <div className="glass-card overflow-hidden">
+          <div className="px-5 py-3.5 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+            <h2 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"
+              style={{ color: '#64748B' }}>
+              <Shield size={12} /> This session
+            </h2>
+            <div className="flex items-center gap-2 text-[10px] font-bold">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                style={{ background: 'rgba(16,185,129,0.10)', color: '#059669' }}>
+                <LogIn size={9} /> {stats.ins}
+              </span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                style={{ background: 'rgba(59,130,246,0.10)', color: '#1D4ED8' }}>
+                <LogOut size={9} /> {stats.outs}
+              </span>
+            </div>
+          </div>
+          <div>
             {sessionLog.map((log, i) => (
-              <div key={i} className="flex items-center gap-3 text-sm">
+              <div key={i}
+                className="flex items-center gap-3 px-5 py-2.5"
+                style={{ borderTop: i > 0 ? '1px solid rgba(15,23,42,0.05)' : 'none' }}>
                 <div className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: log.action === 'Check In' ? '#10B981' : '#3B82F6' }} />
-                <span className="flex-1 truncate" style={{ color: '#334155' }}>{log.name}</span>
-                <span className="text-xs font-semibold"
-                  style={{ color: log.action === 'Check In' ? '#10B981' : '#3B82F6' }}>
+                <span className="flex-1 truncate text-sm font-medium" style={{ color: '#0F172A' }}>{log.name}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: log.action === 'Check In' ? '#059669' : '#1D4ED8' }}>
                   {log.action}
                 </span>
-                <span className="text-xs ml-1" style={{ color: '#94A3B8' }}>{format(new Date(log.time), 'HH:mm')}</span>
+                <span className="text-[11px]" style={{ color: '#94A3B8' }}>{format(new Date(log.time), 'HH:mm')}</span>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Constitution reference — tucked at bottom */}
+      {constitution?.hasConstitution && (
+        <a
+          href={`${API_BASE}${estateAPI.constitutionFileUrl(estateId)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl no-underline"
+          style={{ background: '#fff', border: '1px solid #E2E8F0' }}>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+               style={{ background: 'rgba(236,72,153,0.10)' }}>
+            <FileText size={16} style={{ color: '#EC4899' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold" style={{ color: '#0F172A' }}>Estate Constitution</div>
+            <div className="text-xs" style={{ color: '#64748B' }}>
+              {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Reference for gate policy
+            </div>
+          </div>
+          <div className="text-xs font-bold" style={{ color: '#EC4899' }}>View →</div>
+        </a>
+      )}
+
+      {/* ── Scanner modal ── */}
+      <QrScanner
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onResult={handleScanResult}
+      />
     </div>
   );
 }
