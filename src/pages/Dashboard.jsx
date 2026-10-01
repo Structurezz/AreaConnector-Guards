@@ -7,11 +7,18 @@ import {
   QrCode, Search, CheckCircle, XCircle, Camera,
   LogIn, LogOut, AlertTriangle, User,
   Phone, Home, Calendar, Shield, FileText, Sparkles, Clock, Hourglass,
+  Wifi, WifiOff, CloudUpload,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import { format } from 'date-fns';
 import QrScanner from '../components/QrScanner';
+import { useOnline } from '../offline/useOnline';
+import {
+  findCachedVisitorByCode, saveVisitorsCache,
+  readQueue, enqueueMutation,
+} from '../offline/cache';
+import { drainQueue } from '../offline/queueDrainer';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -160,12 +167,48 @@ export default function SecurityDashboard() {
   const [scannerBusy, setScannerBusy] = useState(false);
 
   const estateId = user?.estateId?._id || user?.estateId;
+  const online = useOnline();
+  const [pendingCount, setPendingCount] = useState(() => readQueue().length);
+
   useEffect(() => {
     if (!estateId) return;
     estateAPI.getConstitutionMeta(estateId)
       .then(({ data }) => setConstitution(data.data))
       .catch(() => setConstitution(null));
   }, [estateId]);
+
+  // Pre-cache the visitor list so offline verify has data to match against.
+  // Refresh on mount + every 2 minutes while online.
+  useEffect(() => {
+    if (!estateId) return;
+    let cancelled = false;
+    const refresh = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const { data } = await visitorAPI.getAll({ limit: 500 });
+        if (!cancelled) saveVisitorsCache(estateId, data?.data || []);
+      } catch { /* offline — the stale cache stays */ }
+    };
+    refresh();
+    const id = setInterval(refresh, 2 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [estateId]);
+
+  // When the connection returns, drain any queued check-in/outs.
+  useEffect(() => {
+    if (!online) return;
+    const q = readQueue();
+    if (q.length === 0) return;
+
+    toast.loading(`Syncing ${q.length} queued ${q.length === 1 ? 'action' : 'actions'}…`, { id: 'sync', duration: 2000 });
+    drainQueue().then(({ drained, dropped, remaining }) => {
+      setPendingCount(remaining);
+      toast.dismiss('sync');
+      if (drained > 0)   toast.success(`Synced ${drained} queued ${drained === 1 ? 'action' : 'actions'}`);
+      if (dropped > 0)   toast(`Dropped ${dropped} already-handled ${dropped === 1 ? 'action' : 'actions'}`, { icon: '⚠️' });
+      if (remaining > 0) toast(`${remaining} still pending`, { icon: '⏳' });
+    });
+  }, [online]);
 
   const firstName = user?.name?.split(' ')[0] || 'Guard';
 
@@ -198,9 +241,29 @@ export default function SecurityDashboard() {
       }
     } catch (err) {
       const status = err.response?.status;
-      if (status === 404) { playSound('error'); setState('not_found'); }
-      else if (status === 403) { playSound('error'); setVisitor(err.response?.data?.data); setState('blacklisted'); }
-      else { playSound('error'); setState('not_found'); toast.error('Verification failed'); }
+      if (status === 404) { playSound('error'); setState('not_found'); return; }
+      if (status === 403) { playSound('error'); setVisitor(err.response?.data?.data); setState('blacklisted'); return; }
+
+      // No status = network error. Fall back to the offline cache so the
+      // guard can still verify a visitor they've seen before.
+      if (!err.response) {
+        const cached = findCachedVisitorByCode(estateId, trimmed);
+        if (cached) {
+          setVisitor(cached);
+          setState('found');
+          playSound('click');
+          toast('Offline — matched from cached visitor list', { icon: '📶', duration: 4000 });
+          return;
+        }
+        playSound('error');
+        setState('not_found');
+        toast.error('You\'re offline and this code isn\'t cached yet');
+        return;
+      }
+
+      playSound('error');
+      setState('not_found');
+      toast.error('Verification failed');
     } finally { setLoading(false); }
   };
 
@@ -237,6 +300,20 @@ export default function SecurityDashboard() {
     }
   };
 
+  const queueOffline = (type, label) => {
+    const pending = enqueueMutation({ type, visitorId: visitor._id, visitorName: visitor.visitorName });
+    setPendingCount(pending);
+    playSound('click');
+    toast.success(`${visitor.visitorName} ${label} (queued, will sync when back online)`, { icon: '📶', duration: 5000 });
+    const now = new Date().toISOString();
+    if (type === 'checkIn')  setVisitor((v) => ({ ...v, status: 'checked-in',  entryTime: now }));
+    if (type === 'checkOut') setVisitor((v) => ({ ...v, status: 'checked-out', exitTime:  now }));
+    setSessionLog((prev) => [
+      { name: visitor.visitorName, action: type === 'checkIn' ? 'Check In' : 'Check Out', time: new Date(), queued: true },
+      ...prev.slice(0, 9),
+    ]);
+  };
+
   const handleCheckIn = async () => {
     try {
       await visitorAPI.checkIn(visitor._id);
@@ -244,7 +321,10 @@ export default function SecurityDashboard() {
       toast.success(`✅ ${visitor.visitorName} checked in`);
       setVisitor((v) => ({ ...v, status: 'checked-in', entryTime: new Date().toISOString() }));
       setSessionLog((prev) => [{ name: visitor.visitorName, action: 'Check In', time: new Date() }, ...prev.slice(0, 9)]);
-    } catch (err) { playSound('error'); toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) {
+      if (!err.response) { queueOffline('checkIn', 'checked in'); return; }
+      playSound('error'); toast.error(err.response?.data?.message || 'Failed');
+    }
   };
 
   const handleCheckOut = async () => {
@@ -254,7 +334,10 @@ export default function SecurityDashboard() {
       toast.success(`${visitor.visitorName} checked out`);
       setVisitor((v) => ({ ...v, status: 'checked-out', exitTime: new Date().toISOString() }));
       setSessionLog((prev) => [{ name: visitor.visitorName, action: 'Check Out', time: new Date() }, ...prev.slice(0, 9)]);
-    } catch (err) { playSound('error'); toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) {
+      if (!err.response) { queueOffline('checkOut', 'checked out'); return; }
+      playSound('error'); toast.error(err.response?.data?.message || 'Failed');
+    }
   };
 
   const reset = () => { setCode(''); setVisitor(null); setState(null); };
@@ -301,6 +384,26 @@ export default function SecurityDashboard() {
               style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.95)', border: '1px solid rgba(255,255,255,0.20)' }}>
               {format(new Date(), 'EEE, HH:mm')}
             </span>
+            {/* Connection + queue pill */}
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+              style={{
+                background: online ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.28)',
+                color: '#fff',
+                border: `1px solid ${online ? 'rgba(167,243,208,0.45)' : 'rgba(253,230,138,0.55)'}`,
+              }}>
+              {online ? <Wifi size={10} /> : <WifiOff size={10} />}
+              {online ? 'Online' : 'Offline'}
+            </span>
+            {pendingCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+                style={{
+                  background: 'rgba(239,68,68,0.28)',
+                  color: '#fff',
+                  border: '1px solid rgba(254,202,202,0.55)',
+                }}>
+                <CloudUpload size={10} /> {pendingCount} pending
+              </span>
+            )}
           </div>
           {/* Greeting */}
           <h1 className="text-white font-black" style={{ letterSpacing: '-0.03em', lineHeight: 1.1 }}>

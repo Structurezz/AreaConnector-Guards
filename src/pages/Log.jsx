@@ -3,11 +3,14 @@ import { visitorAPI } from '../api';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
-import { FileText, LogIn, LogOut, Search, Clock, Phone } from 'lucide-react';
+import { FileText, LogIn, LogOut, Search, Clock, Phone, WifiOff } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import Pagination from '../components/ui/Pagination';
+import { useOnline } from '../offline/useOnline';
+import { useAuth } from '../context/AuthContext';
+import { readVisitorsCache, saveVisitorsCache, enqueueMutation } from '../offline/cache';
 
 const PAGE_SIZE = 20;
 
@@ -20,12 +23,16 @@ const STATUS_FILTERS = [
 ];
 
 export default function SecurityLog() {
+  const { user } = useAuth();
+  const estateId = user?.estateId?._id || user?.estateId;
+  const online = useOnline();
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [page, setPage]         = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [fromCache, setFromCache] = useState(false);
 
   const load = async (p = 1) => {
     setLoading(true);
@@ -33,7 +40,22 @@ export default function SecurityLog() {
       const { data } = await visitorAPI.getAll({ page: p, limit: PAGE_SIZE });
       setVisitors(data.data);
       setPagination(data.pagination || { total: data.data.length, pages: 1 });
-    } catch { toast.error('Failed to load'); } finally { setLoading(false); }
+      setFromCache(false);
+      // Keep offline cache fresh with everything we've just seen
+      if (p === 1) saveVisitorsCache(estateId, data.data);
+    } catch (err) {
+      if (!err.response) {
+        // Offline — fall back to the cached snapshot
+        const { list, updatedAt } = readVisitorsCache(estateId);
+        setVisitors(list.slice(0, PAGE_SIZE));
+        setPagination({ total: list.length, pages: Math.max(1, Math.ceil(list.length / PAGE_SIZE)) });
+        setFromCache(true);
+        if (list.length === 0) toast.error('Offline — no cached log yet');
+        else toast(`Offline — showing ${list.length} cached ${list.length === 1 ? 'visitor' : 'visitors'} from ${new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, { icon: '📶', duration: 5000 });
+      } else {
+        toast.error('Failed to load');
+      }
+    } finally { setLoading(false); }
   };
 
   const handlePage = (p) => { setPage(p); load(p); };
@@ -52,7 +74,24 @@ export default function SecurityLog() {
         toast.success(`${v.visitorName} checked out`);
       }
       load(page);
-    } catch (err) { playSound('error'); toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) {
+      if (!err.response) {
+        // Queue for later sync when the connection returns
+        const type = v.status === 'active' ? 'checkIn' : 'checkOut';
+        enqueueMutation({ type, visitorId: v._id, visitorName: v.visitorName });
+        playSound('click');
+        toast.success(`${v.visitorName} ${type === 'checkIn' ? 'checked in' : 'checked out'} (queued offline)`, { icon: '📶', duration: 5000 });
+        // Optimistic local update
+        const now = new Date().toISOString();
+        setVisitors((prev) => prev.map((x) =>
+          x._id === v._id
+            ? { ...x, status: type === 'checkIn' ? 'checked-in' : 'checked-out', ...(type === 'checkIn' ? { entryTime: now } : { exitTime: now }) }
+            : x,
+        ));
+        return;
+      }
+      playSound('error'); toast.error(err.response?.data?.message || 'Failed');
+    }
   };
 
   const filtered = useMemo(() => {
@@ -93,6 +132,14 @@ export default function SecurityLog() {
           <p className="text-slate-500 text-xs sm:text-sm mt-0.5">Today's visitor movements through the gate</p>
         </div>
       </div>
+
+      {(!online || fromCache) && (
+        <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-semibold"
+          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#B45309' }}>
+          <WifiOff size={14} className="flex-shrink-0" />
+          <span>Offline — showing the last cached snapshot. Actions you take will sync when the connection returns.</span>
+        </div>
+      )}
 
       {/* Stat chips */}
       {!loading && visitors.length > 0 && (
