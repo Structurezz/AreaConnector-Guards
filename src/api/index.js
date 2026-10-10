@@ -8,6 +8,10 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   refresh: () => api.post('/auth/refresh'),
   updateProfile: (data) => api.patch('/auth/me', data),
+
+  // Password management
+  changePassword: (data) => api.post('/auth/change-password', data),
+  requestPasswordReset: (data) => api.post('/auth/forgot-password/request', data),
 };
 
 // Estates
