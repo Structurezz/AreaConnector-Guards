@@ -1,3 +1,4 @@
+import SeoTracker from './components/SeoTracker';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -50,6 +51,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <SeoTracker />
       <AuthProvider>
         <SocketProvider>
           <AppRoutes />

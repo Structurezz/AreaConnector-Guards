@@ -1,0 +1,7 @@
+# Only the sign-in and sign-up pages are meant for search. Every other route is
+# behind login and is marked noindex by src/components/SeoTracker.jsx. Crawling
+# stays allowed so Google can see that noindex.
+User-agent: *
+Allow: /
+
+Sitemap: https://area-guards.areaconnect.pro/sitemap.xml
