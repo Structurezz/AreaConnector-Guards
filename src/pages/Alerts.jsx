@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
 import { playSound } from '../utils/sounds';
 import Pagination from '../components/ui/Pagination';
+import Portal from '../components/ui/Portal';
 
 const PAGE_SIZE = 15;
 
@@ -85,7 +86,8 @@ function BroadcastModal({ onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+    <Portal>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
       <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 24px 64px rgba(124,58,237,0.2)', border: '2px solid #7C3AED' }}>
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #DC2626 100%)', padding: '20px 20px 16px', position: 'relative' }}>
@@ -198,6 +200,7 @@ function BroadcastModal({ onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

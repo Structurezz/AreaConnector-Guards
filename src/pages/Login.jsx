@@ -5,6 +5,7 @@ import { authAPI } from '../api';
 import { Eye, EyeOff, AlertCircle, CheckCircle, Shield, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
+import Portal from '../components/ui/Portal';
 
 function ForgotPasswordModal({ initialEmail = '', onClose }) {
   const [email, setEmail] = useState(initialEmail);
@@ -20,7 +21,8 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <Portal>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 22, overflow: 'hidden', boxShadow: '0 30px 60px -20px rgba(0,0,0,0.5)', position: 'relative' }}>
         <button onClick={onClose} aria-label="Close"
           style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', background: '#F1F5F9', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
@@ -75,6 +77,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 

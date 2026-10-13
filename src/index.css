@@ -323,3 +323,26 @@
 /* ── Glow utilities ─────────────────────────────────────────────── */
 .glow-emerald { box-shadow: 0 0 20px rgba(59,130,246,0.18); }
 .glow-red     { box-shadow: 0 0 20px rgba(239,68,68,0.18); }
+
+/* ── Overlays: one backdrop for every modal / sheet / drawer ────────── */
+/* Opacity-only animation — a transform here would re-anchor fixed children. */
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+.overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: backdropIn 0.2s ease-out;
+}
+/* Same look applied directly to an overlay container (no separate layer). */
+.overlay-scrim {
+  background: rgba(15, 23, 42, 0.48);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: backdropIn 0.2s ease-out;
+}
+@keyframes sheetUp  { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheetPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.sheet-panel { animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+@media (min-width: 640px) { .sheet-panel { animation: sheetPop 0.2s ease-out; } }

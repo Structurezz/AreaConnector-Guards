@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QrScannerLib from 'qr-scanner';
 import { X, Zap, ZapOff, Camera, SwitchCamera, AlertTriangle } from 'lucide-react';
+import Portal from './ui/Portal';
 
 /**
  * Full-screen QR scanner modal.
@@ -103,8 +104,9 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
   if (!open) return null;
 
   return (
+    <Portal>
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
+      position: 'fixed', inset: 0, zIndex: 200,
       background: '#000',
       display: 'flex', flexDirection: 'column',
     }}>
@@ -250,5 +252,6 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
