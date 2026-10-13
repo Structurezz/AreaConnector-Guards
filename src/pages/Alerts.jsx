@@ -9,6 +9,7 @@ import { useSocket } from '../context/SocketContext';
 import { playSound } from '../utils/sounds';
 import Pagination from '../components/ui/Pagination';
 import Portal from '../components/ui/Portal';
+import { upsertAlert } from '../utils/alertEvents';
 
 const PAGE_SIZE = 15;
 
@@ -215,7 +216,7 @@ export default function SecurityAlerts() {
   const load = async (p = 1) => {
     setLoading(true);
     try {
-      const { data } = await alertAPI.getAll({ status: 'open', page: p, limit: PAGE_SIZE });
+      const { data } = await alertAPI.getAll({ status: 'active', page: p, limit: PAGE_SIZE });
       setAlerts(data.data);
       setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch { toast.error('Failed'); } finally { setLoading(false); }
@@ -227,8 +228,12 @@ export default function SecurityAlerts() {
 
   useEffect(() => {
     if (!subscribe) return;
+    // Live sync: add new alerts, update acknowledged ones in place, drop
+    // resolved ones (this list only shows alerts that still need attention).
     const unsub = subscribe('new_alert', (alert) => {
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => (alert.status === 'resolved'
+        ? prev.filter((a) => a._id !== alert._id)
+        : upsertAlert(prev, alert)));
     });
     return unsub;
   }, [subscribe]);

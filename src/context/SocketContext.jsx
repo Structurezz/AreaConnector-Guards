@@ -26,6 +26,9 @@ export const SocketProvider = ({ children }) => {
     const socket = io(socketUrl, {
       withCredentials: true,
       transports: ['polling', 'websocket'],
+      // Read on every (re)connect so the server can verify who we are and put
+      // us in the right estate / staff rooms.
+      auth: (cb) => cb({ token: localStorage.getItem('accessToken') }),
       upgrade: true,
     });
 

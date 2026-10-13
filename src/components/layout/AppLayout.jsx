@@ -5,7 +5,10 @@ import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
+import { alertAPI } from '../../api';
+import toast from 'react-hot-toast';
 import { playSiren, stopSiren } from '../../utils/sounds';
+import { isStatusUpdate, isIncomingAlert } from '../../utils/alertEvents';
 
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
@@ -23,7 +26,7 @@ const TYPE_META = {
   other:    { label: 'Alert',             barColor: '#6B7280' },
 };
 
-function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
+function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute }) {
   const isBroadcast = alert.isEmergencyBroadcast;
   const role = alert.raisedByRole || alert.residentId?.role || 'resident';
   const roleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
@@ -39,7 +42,7 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-5 pointer-events-none">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={onDismiss} />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
 
       <div className="relative pointer-events-auto w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
         style={{ border: `2px solid ${barColor}30` }}>
@@ -88,7 +91,7 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
                 title={muted ? 'Unmute' : 'Mute siren'}>
                 {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
               </button>
-              <button onClick={onDismiss}
+              <button onClick={onClose} aria-label="Close without acknowledging"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 <X size={16} />
               </button>
@@ -151,7 +154,9 @@ function AlertPopup({ alert, queueCount, onDismiss, muted, onToggleMute }) {
           <button onClick={onDismiss}
             className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all border"
             style={{ background: `${barColor}10`, color: barColor, borderColor: `${barColor}40` }}>
-            {queueCount > 1 ? `Acknowledge & See Next (${queueCount - 1} remaining)` : 'Acknowledge & Dismiss'}
+            {alert.isEmergencyBroadcast
+              ? (queueCount > 1 ? `Got it — next (${queueCount - 1} remaining)` : 'Got it')
+              : (queueCount > 1 ? `Acknowledge & see next (${queueCount - 1} remaining)` : "Acknowledge — I'm on it")}
           </button>
         </div>
       </div>
@@ -166,30 +171,50 @@ export default function AppLayout({ children }) {
   const [queue, setQueue] = useState([]);
   const [muted, setMuted] = useState(false);
   const { subscribe } = useSocket() || {};
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const myId = user?._id ? String(user._id) : null;
   const navigate = useNavigate();
   const mutedRef = useRef(false);
 
   mutedRef.current = muted;
 
-  const handleDismiss = useCallback(() => {
+  const handleDismiss = useCallback((acknowledge = true) => {
     setQueue((q) => {
+      const current = q[0];
+      // A guard acknowledging a resident/staff alert tells the raiser help is
+      // coming. Broadcasts are informational — nothing to acknowledge.
+      if (acknowledge && current?._id && !current.isEmergencyBroadcast && current.status === 'open') {
+        alertAPI.acknowledge(current._id).catch(() => toast.error('Could not acknowledge — try from Alerts'));
+      }
       const remaining = q.slice(1);
       if (remaining.length === 0) stopSiren();
       return remaining;
     });
   }, []);
 
-  const handleToggleMute = useCallback(() => setMuted((m) => !m), []);
+  // Muting silences the siren immediately, not just the next alert.
+  const handleToggleMute = useCallback(() => setMuted((m) => { if (!m) stopSiren(); return !m; }), []);
 
   useEffect(() => {
     if (!subscribe) return;
     const unsub = subscribe('new_alert', (alert) => {
-      setQueue((q) => [...q, alert]);
+      // Status change (acknowledged / resolved by anyone): it's being handled,
+      // so take it off the popup queue and silence the siren if nothing's left.
+      if (isStatusUpdate(alert)) {
+        setQueue((q) => {
+          const remaining = q.filter((a) => a._id !== alert._id);
+          if (remaining.length !== q.length && remaining.length === 0) stopSiren();
+          return remaining;
+        });
+        return;
+      }
+      // Our own broadcast echoing back — no popup, no siren.
+      if (!isIncomingAlert(alert, myId)) return;
+      setQueue((q) => (q.some((a) => a._id === alert._id) ? q : [...q, alert]));
       if (!mutedRef.current) playSiren();
     });
     return unsub;
-  }, [subscribe]);
+  }, [subscribe, myId]);
 
   const current = queue[0] || null;
 
@@ -199,7 +224,8 @@ export default function AppLayout({ children }) {
         <AlertPopup
           alert={current}
           queueCount={queue.length}
-          onDismiss={handleDismiss}
+          onDismiss={() => handleDismiss(true)}
+          onClose={() => handleDismiss(false)}
           muted={muted}
           onToggleMute={handleToggleMute}
         />
