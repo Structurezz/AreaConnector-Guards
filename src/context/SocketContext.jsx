@@ -54,9 +54,15 @@ export const SocketProvider = ({ children }) => {
   }, [connected]); // new reference when socket connects → consumers re-subscribe on the live socket
 
   const emit = useCallback((event, data) => socketRef.current?.emit(event, data), []);
+  // Emit and wait for the server's acknowledgement (resolves false on timeout).
+  const emitAck = useCallback((event, data, timeoutMs = 4000) => new Promise((resolve) => {
+    const sock = socketRef.current;
+    if (!sock) return resolve(false);
+    sock.timeout(timeoutMs).emit(event, data, (err) => resolve(!err));
+  }), []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, connected, subscribe, emit }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, connected, subscribe, emit, emitAck }}>
       {children}
     </SocketContext.Provider>
   );

@@ -9,6 +9,7 @@ import { alertAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { playSiren, stopSiren } from '../../utils/sounds';
 import { isStatusUpdate, isIncomingAlert } from '../../utils/alertEvents';
+import CallButton from '../calls/CallButton';
 
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
@@ -120,6 +121,7 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
                     <Phone size={10} />{alert.residentId.phone}
                   </a>
                 )}
+                {alert.residentId?._id && <CallButton person={alert.residentId} />}
               </div>
             </div>
           </div>

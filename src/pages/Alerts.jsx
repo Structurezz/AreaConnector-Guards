@@ -10,6 +10,7 @@ import { playSound } from '../utils/sounds';
 import Pagination from '../components/ui/Pagination';
 import Portal from '../components/ui/Portal';
 import { upsertAlert } from '../utils/alertEvents';
+import CallButton from '../components/calls/CallButton';
 
 const PAGE_SIZE = 15;
 
@@ -51,6 +52,7 @@ function RaisedByBadge({ alert }) {
           {alert.residentId.phone}
         </a>
       )}
+      {alert.residentId?._id && <CallButton person={alert.residentId} />}
     </div>
   );
 }
