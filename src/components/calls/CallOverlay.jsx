@@ -85,6 +85,9 @@ export default function CallOverlay() {
           <h2 className="text-2xl font-bold mt-6">{peer.name || 'Neighbour'}</h2>
           <p className="text-sm text-indigo-200 mt-1">{[ROLE_LABEL[peer.role] && peer.role !== 'resident' ? ROLE_LABEL[peer.role] : null, peer.unit].filter(Boolean).join(' · ')}</p>
           <p className={`mt-5 text-lg font-medium ${status === 'active' ? 'tabular-nums' : ''}`}>{subtitle}</p>
+          {status === 'active' && call.path && (
+            <p className="mt-1 text-[11px] text-indigo-200/80">{call.path === 'direct' ? 'Direct connection' : 'Connected via AreaConnect relay'}</p>
+          )}
           {left != null && status === 'active' && (
             <p className={`mt-1 text-xs ${left < 90 ? 'text-amber-300 font-semibold' : 'text-indigo-200'}`}>
               {left < 90 ? `Credits run out in ${mmss(left)}` : `About ${Math.floor(left / 60)} min of credit left`}

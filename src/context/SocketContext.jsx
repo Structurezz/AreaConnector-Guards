@@ -54,6 +54,9 @@ export const SocketProvider = ({ children }) => {
   }, [connected]); // new reference when socket connects → consumers re-subscribe on the live socket
 
   const emit = useCallback((event, data) => socketRef.current?.emit(event, data), []);
+  // Fire-and-forget, dropped if the connection is congested (live call audio).
+  const sendVolatile = useCallback((event, ...args) => { socketRef.current?.volatile.emit(event, ...args); }, []);
+
   // Emit and wait for the server's acknowledgement (resolves false on timeout).
   const emitAck = useCallback((event, data, timeoutMs = 4000) => new Promise((resolve) => {
     const sock = socketRef.current;
@@ -62,7 +65,7 @@ export const SocketProvider = ({ children }) => {
   }), []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, connected, subscribe, emit, emitAck }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, connected, subscribe, emit, emitAck, sendVolatile }}>
       {children}
     </SocketContext.Provider>
   );
