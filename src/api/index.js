@@ -105,3 +105,8 @@ export const callAPI = {
   cancel:   (id) => api.post(`/calls/${id}/cancel`),
   end:      (id) => api.post(`/calls/${id}/end`),
 };
+
+// Personal safety: residents sharing live location with staff
+export const safetyAPI = {
+  activeLocations: () => api.get('/safety/location/active'),
+};

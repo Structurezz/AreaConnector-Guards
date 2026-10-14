@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { playSiren, stopSiren } from '../../utils/sounds';
 import { isStatusUpdate, isIncomingAlert } from '../../utils/alertEvents';
 import CallButton from '../calls/CallButton';
+import LiveLocations from '../safety/LiveLocations';
 
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
@@ -277,6 +278,8 @@ export default function AppLayout({ children }) {
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
           {children}
         </main>
+        {/* Residents sharing live location for their safety */}
+        <LiveLocations />
       </div>
 
       {/* ── Mobile bottom navigation ── */}
