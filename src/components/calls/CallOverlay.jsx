@@ -3,7 +3,7 @@ import { Phone, PhoneOff, Mic, MicOff, ShieldCheck } from 'lucide-react';
 import Portal from '../ui/Portal';
 import { useCall, END_TEXT, REASON_TEXT } from '../../context/CallContext';
 
-const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'Estate Manager', resident: 'Neighbour' };
+const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'AreaConnect support', resident: 'Neighbour' };
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 

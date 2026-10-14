@@ -1,6 +1,7 @@
 import SeoTracker from './components/SeoTracker';
 import { CallProvider } from './context/CallContext';
 import CallOverlay from './components/calls/CallOverlay';
+import Calls from './pages/Calls';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/verify" element={<RequireSecurity><SecurityDashboard /></RequireSecurity>} />
       <Route path="/log" element={<RequireSecurity><SecurityLog /></RequireSecurity>} />
       <Route path="/alerts" element={<RequireSecurity><SecurityAlerts /></RequireSecurity>} />
+      <Route path="/calls" element={<RequireSecurity><Calls /></RequireSecurity>} />
       <Route path="/settings" element={<RequireSecurity><SecuritySettings /></RequireSecurity>} />
       <Route path="/" element={<Navigate to="/verify" replace />} />
       <Route path="*" element={<Navigate to="/verify" replace />} />

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { QrCode, ClipboardList, Shield, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { QrCode, ClipboardList, Shield, LogOut, Settings as SettingsIcon, PhoneCall } from 'lucide-react';
 
 const links = [
   { to: '/verify', icon: QrCode, label: 'Verify Visitor' },
   { to: '/log', icon: ClipboardList, label: 'Entry Log' },
   { to: '/alerts', icon: Shield, label: 'Live Alerts' },
+  { to: '/calls', icon: PhoneCall, label: 'Calls' },
   { to: '/settings', icon: SettingsIcon, label: 'Settings' },
 ];
 

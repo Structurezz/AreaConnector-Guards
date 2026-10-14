@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase } from 'lucide-react';
+import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase, PhoneCall } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import { useSocket } from '../../context/SocketContext';
@@ -287,6 +287,7 @@ export default function AppLayout({ children }) {
             { to: '/verify', icon: QrCode,        label: 'Scan' },
             { to: '/log',    icon: ClipboardList,  label: 'Log' },
             { to: '/alerts', icon: Shield,         label: 'Alerts' },
+            { to: '/calls',  icon: PhoneCall,      label: 'Calls' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
