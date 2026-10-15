@@ -11,6 +11,7 @@ import { playSiren, stopSiren } from '../../utils/sounds';
 import { isStatusUpdate, isIncomingAlert } from '../../utils/alertEvents';
 import CallButton from '../calls/CallButton';
 import LiveLocations from '../safety/LiveLocations';
+import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
@@ -276,6 +277,7 @@ export default function AppLayout({ children }) {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
+          <CallAlertsPrompt appName="AC Guards" />
           {children}
         </main>
         {/* Residents sharing live location for their safety */}

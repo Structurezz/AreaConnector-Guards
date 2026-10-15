@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import toast from 'react-hot-toast';
 import { callAPI } from '../api';
 import { useSocket } from './SocketContext';
+import { useAuth } from './AuthContext';
 import { startTone, stopTone } from '../utils/callTones';
 
 // One-to-one voice calls over WebRTC.
@@ -24,6 +25,11 @@ import { startTone, stopTone } from '../utils/callTones';
 //      direct link never ends the call.
 
 const CallContext = createContext(null);
+
+const SEEN_KEY = 'calls_missed_seen';
+const MISSED_SINCE_KEY = 'calls_missed_checked_at';
+const readSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch { return []; } };
+const writeSeen = (ids) => localStorage.setItem(SEEN_KEY, JSON.stringify(ids.slice(0, 100)));
 export const useCall = () => useContext(CallContext);
 
 export const END_TEXT = {
@@ -39,6 +45,7 @@ export const REASON_TEXT = {
 
 export function CallProvider({ children }) {
   const { subscribe, emitAck, emit, sendVolatile } = useSocket() || {};
+  const { user } = useAuth() || {};
   const [call, setCall] = useState(null);
   const callRef = useRef(null);
   callRef.current = call;
@@ -266,6 +273,7 @@ export function CallProvider({ children }) {
     if (!subscribe) return;
     const offs = [
       subscribe('call:incoming', (p) => {
+        if (callRef.current?.id === p.callId) return; // already showing it (picked up via /calls/ringing)
         if (callRef.current && callRef.current.status !== 'ended') {
           callAPI.decline(p.callId).catch(() => {}); // already on a call
           return;
@@ -312,12 +320,80 @@ export function CallProvider({ children }) {
         // Picked up on another of my devices: stop ringing here.
         if (c?.id === p.callId && c.status === 'incoming') { stopTone(); setCall(null); }
       }),
+      subscribe('call:missed', (p) => showMissed([p])),
       subscribe('call:low_credit', (p) => {
         if (callRef.current?.id === p.callId) toast('About 1 minute of call credit left', { icon: '⏳', duration: 6000 });
       }),
     ];
     return () => offs.forEach((off) => off?.());
   }, [subscribe, createPeer, finish, releaseMedia, update, startRelay]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Missed calls ─────────────────────────────────────────────────────────
+  // Shown live (`call:missed`) and caught up from call history whenever the
+  // app opens or comes back to the foreground — so a call missed while the
+  // app was closed still shows up. Each call is announced once.
+  const startCallRef = useRef(startCall);
+  startCallRef.current = startCall;
+  const showMissed = useCallback((list) => {
+    const seen = readSeen();
+    const fresh = list.filter((m) => m?.callId && !seen.includes(m.callId));
+    if (!fresh.length) return;
+    writeSeen([...fresh.map((m) => m.callId), ...seen]);
+    fresh.forEach((m) => window.dispatchEvent(new CustomEvent('app:notification', { detail: {
+      id: `missed-${m.callId}`, type: 'missed_call', title: `Missed call from ${m.from?.name || 'someone'}`,
+      body: 'Call them back from Calls', createdAt: m.at || new Date().toISOString(), silent: true,
+    } })));
+    const latest = fresh[0];
+    const more = fresh.length - 1;
+    toast((t) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 320 }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>📵</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>Missed call from {latest.from?.name || 'someone'}{more > 0 ? ` +${more} more` : ''}</div>
+          <button onClick={() => { toast.dismiss(t.id); if (latest.from?._id) startCallRef.current(latest.from); }}
+            style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: '#2563EB', background: 'none', border: 0, padding: 0, cursor: 'pointer' }}>
+            Call back →
+          </button>
+        </div>
+      </div>
+    ), { duration: 12000, id: `missed-${latest.callId}` });
+  }, []);
+
+  const catchUp = useCallback(async () => {
+    if (!callAPI.ringing || !localStorage.getItem('accessToken')) return; // admin never receives calls; logged out
+    // 1) A call ringing for me right now (opened from the notification / mid-ring).
+    if (!callRef.current) {
+      try {
+        const { data } = await callAPI.ringing();
+        const p = data.data;
+        if (p && !callRef.current) {
+          setCall({ id: p.callId, direction: 'incoming', kind: p.kind, peer: p.from, status: 'incoming', iceServers: p.iceServers, muted: false });
+          startTone('ring');
+        }
+      } catch { /* offline */ }
+    }
+    // 2) Calls I missed since I last looked.
+    try {
+      const since = Number(localStorage.getItem(MISSED_SINCE_KEY)) || Date.now() - 24 * 3600_000;
+      const { data } = await callAPI.history();
+      localStorage.setItem(MISSED_SINCE_KEY, String(Date.now()));
+      const missed = (data.data || [])
+        .filter((c) => c.direction === 'incoming' && ['missed', 'cancelled'].includes(c.status) && new Date(c.createdAt).getTime() > since - 60_000)
+        .map((c) => ({ callId: String(c._id), at: c.createdAt, from: c.callerId }));
+      if (missed.length) showMissed(missed);
+    } catch { /* offline */ }
+  }, [showMissed]);
+
+  useEffect(() => {
+    catchUp();
+    // Opened via ?incoming=<id> from a notification — tidy the URL.
+    if (/[?&](incoming|missed)=/.test(window.location.search)) window.history.replaceState(null, '', window.location.pathname);
+    const onVisible = () => { if (document.visibilityState === 'visible') catchUp(); };
+    const onSw = (e) => { if (e.data?.type === 'call:open_incoming' || e.data?.type === 'push:open') catchUp(); };
+    document.addEventListener('visibilitychange', onVisible);
+    navigator.serviceWorker?.addEventListener('message', onSw);
+    return () => { document.removeEventListener('visibilitychange', onVisible); navigator.serviceWorker?.removeEventListener('message', onSw); };
+  }, [catchUp, user?._id]);
 
   useEffect(() => () => { releaseMedia(); clearTimeout(clearTimer.current); }, [releaseMedia]);
 

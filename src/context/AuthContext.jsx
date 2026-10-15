@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    await import('../utils/push').then((m) => m.disablePush()).catch(() => {});
     await authAPI.logout().catch(() => {});
     localStorage.removeItem('accessToken');
     setUser(null);

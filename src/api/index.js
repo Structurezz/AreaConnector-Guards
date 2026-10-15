@@ -96,6 +96,7 @@ export const alertAPI = {
 
 // Calls (staff receive free emergency calls from residents and can call back)
 export const callAPI = {
+  ringing:     () => api.get('/calls/ringing'),
   config:   () => api.get('/calls/config'),
   directory: () => api.get('/calls/directory'),
   history:  () => api.get('/calls/history'),
