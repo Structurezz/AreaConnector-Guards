@@ -52,6 +52,14 @@ export default function CallOverlay() {
     return () => clearInterval(t);
   }, [call?.status]);
 
+  // Lets the update banner hold off its automatic refresh mid-call
+  const inCall = !!call;
+  useEffect(() => {
+    if (!inCall) return;
+    document.documentElement.dataset.inCall = '1';
+    return () => { delete document.documentElement.dataset.inCall; };
+  }, [inCall]);
+
   if (!call) return null;
   const { peer = {}, status, kind, direction } = call;
   const free = kind !== 'standard';

@@ -29,10 +29,26 @@ function injectGoogleTags(env) {
   };
 }
 
+
+// New-deploy detection (src/components/ui/UpdateBanner.jsx): every build gets
+// a version baked into the bundle and written to dist/version.json, which the
+// running app polls. A different value means a new deploy is live.
+const BUILD_VERSION = String(Date.now());
+function emitVersionFile() {
+  return {
+    name: 'emit-version-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: BUILD_VERSION, builtAt: new Date().toISOString() }) });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
+  define: { __APP_VERSION__: JSON.stringify(BUILD_VERSION) },
   plugins: [
     react(),
-    injectGoogleTags(loadEnv(mode, process.cwd(), '')),
+    injectGoogleTags(loadEnv(mode, process.cwd(), '')), emitVersionFile(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg', 'icons/mask.svg'],
