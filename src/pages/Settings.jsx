@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api';
-import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Shield, X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
+import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, Shield, X, Lock, KeyRound, ShieldCheck, LogOut, Building2, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,7 +31,7 @@ function resizeToDataUrl(file, size = 320) {
 }
 
 export default function SecuritySettings() {
-  const { user, fetchMe, logout } = useAuth();
+  const { user, estate, fetchMe, logout } = useAuth();
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
@@ -117,255 +117,229 @@ export default function SecuritySettings() {
   };
 
   const initial = (form.name || user?.name || '?')[0]?.toUpperCase();
+  const estateName = estate?.name || (user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : '') || 'Your estate';
+  const [signingOut, setSigningOut] = useState(false);
+  const signOut = async () => {
+    setSigningOut(true);
+    try { await logout?.(); } catch {}
+    navigate('/login', { replace: true });
+  };
+
+  const inputCls = 'input-field gs-input';
+  const inputStyle = { height: 44, borderRadius: 12, fontSize: 14 };
+
+  const SectionHead = ({ icon: Icon, title, hint, tone = 'brand' }) => (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0"
+        style={{ background: tone === 'amber' ? 'linear-gradient(135deg,#F59E0B,#D97706)' : tone === 'slate' ? 'linear-gradient(135deg,#475569,#1E293B)' : 'linear-gradient(135deg,#3B82F6,#1D4ED8)' }}>
+        <Icon size={16} />
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-[15px] font-semibold" style={{ color: '#0F172A' }}>{title}</h2>
+        {hint && <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{hint}</p>}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-2xl">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-          Settings
-        </h1>
-        <p className="text-sm mt-1" style={{ color: '#64748B' }}>
-          Update your profile and choose how you appear to residents.
-        </p>
+    <div className="animate-fade-in max-w-5xl">
+      <style>{`.gs-input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.15)}`}</style>
+      <div className="mb-4">
+        <h1 className="text-[21px] font-semibold" style={{ color: '#0F172A', letterSpacing: '-0.01em' }}>Settings</h1>
+        <p className="text-[13px] mt-0.5" style={{ color: '#475569' }}>Your profile, privacy and sign-in.</p>
       </div>
 
-      {/* Profile card */}
-      <div className="glass-card p-5 sm:p-6">
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: '#64748B' }}>
-          <UserIcon size={13} /> Profile
-        </h2>
-
-        <div className="flex items-center gap-4 sm:gap-5 mb-5">
-          <div className="relative flex-shrink-0">
-            {form.profilePhoto ? (
-              <img
-                src={form.profilePhoto}
-                alt="Profile"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
-                style={{ border: '3px solid #fff', boxShadow: '0 4px 14px rgba(59,130,246,0.30)' }}
-              />
-            ) : (
-              <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center font-bold text-2xl sm:text-3xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.18), rgba(37,99,235,0.10))',
-                  border: '2px solid rgba(59,130,246,0.28)',
-                  color: '#1D4ED8',
-                }}
-              >
-                {initial}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-white"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                boxShadow: '0 4px 12px rgba(59,130,246,0.45)',
-                border: '2px solid #fff',
-              }}
-              title="Change photo"
-            >
-              <Camera size={14} />
-            </button>
+      {mustReset && (
+        <div className="g-rise rounded-2xl p-3.5 mb-4 flex items-start gap-2.5"
+          style={{ background: '#FFFBEB', border: '1px solid rgba(245,158,11,0.35)' }}>
+          <ShieldCheck size={17} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 13, color: '#92400E', lineHeight: 1.55 }}>
+            <strong>Temporary password detected.</strong> Set a new password below before you can use the app.
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold truncate" style={{ color: '#0F172A' }}>{form.name || 'Your name'}</div>
-            <div className="text-xs mt-0.5 truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
-            <div className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: '#2563EB' }}>
-              <Shield size={11} /> Security Guard
+        </div>
+      )}
+
+      <div className="grid lg:grid-cols-[320px_minmax(0,1fr)] gap-4 lg:gap-6 items-start">
+        {/* ── Left: identity card ── */}
+        <div className="space-y-4 lg:sticky lg:top-4">
+          <div className="g-card g-rise overflow-hidden">
+            <div className="h-20 relative" style={{ background: 'radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,.38) 0%, transparent 60%), #07111F' }}>
+              <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '18px 18px' }} />
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                style={{ background: 'rgba(59,130,246,0.10)', color: '#1D4ED8' }}
-              >
-                {uploading ? 'Processing…' : form.profilePhoto ? 'Change photo' : 'Upload photo'}
-              </button>
-              {form.profilePhoto && (
-                <button
-                  type="button"
-                  onClick={() => set('profilePhoto', '')}
-                  className="text-xs font-medium px-2 py-1.5 rounded-lg flex items-center gap-1"
-                  style={{ color: '#94A3B8' }}
-                >
-                  <X size={11} /> Remove
+            <div className="px-5 pb-5 -mt-10 relative">
+              <div className="relative inline-block">
+                {form.profilePhoto ? (
+                  <img src={form.profilePhoto} alt="Profile"
+                    className="w-20 h-20 rounded-full object-cover"
+                    style={{ border: '4px solid #fff', boxShadow: '0 6px 18px -6px rgba(15,23,42,0.35)' }} />
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center font-semibold text-2xl"
+                    style={{ background: '#EFF6FF', color: '#1D4ED8', border: '4px solid #fff', boxShadow: '0 6px 18px -6px rgba(15,23,42,0.35)' }}>
+                    {initial}
+                  </div>
+                )}
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-white"
+                  style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', boxShadow: '0 4px 12px rgba(59,130,246,0.45)', border: '2px solid #fff' }}
+                  title="Change photo">
+                  <Camera size={14} />
                 </button>
-              )}
-            </div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFile} style={{ display: 'none' }} />
-          </div>
-        </div>
+              </div>
 
-        <div className="mb-4">
-          <label className="text-xs font-semibold mb-1.5 block" style={{ color: '#475569' }}>Full name</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => set('name', e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', color: '#0F172A' }}
-            placeholder="Your name"
-          />
-        </div>
+              <div className="mt-3 text-[17px] font-semibold truncate" style={{ color: '#0F172A' }}>{form.name || 'Your name'}</div>
+              <div className="text-xs mt-0.5 truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
 
-        <div className="mb-2">
-          <label className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: '#475569' }}>
-            <Phone size={11} /> Phone
-          </label>
-          <input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => set('phone', e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', color: '#0F172A' }}
-            placeholder="+234…"
-          />
-        </div>
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
+                  <Shield size={11} /> Security Guard
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full max-w-full" style={{ background: '#F1F5F9', color: '#475569' }}>
+                  <Building2 size={11} className="shrink-0" /> <span className="truncate">{estateName}</span>
+                </span>
+              </div>
 
-        <div className="text-[11px] flex items-center gap-1.5" style={{ color: '#94A3B8' }}>
-          <Mail size={10} /> {user?.email} <span className="opacity-70">· can't be changed</span>
-        </div>
-      </div>
-
-      {/* Privacy card */}
-      <div className="glass-card p-5 sm:p-6">
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: '#64748B' }}>
-          {form.isDiscoverable ? <Eye size={13} /> : <EyeOff size={13} />} Privacy
-        </h2>
-
-        <button
-          type="button"
-          onClick={() => set('isDiscoverable', !form.isDiscoverable)}
-          className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all"
-          style={{
-            border: `1.5px solid ${form.isDiscoverable ? 'rgba(59,130,246,0.28)' : '#E2E8F0'}`,
-            background: form.isDiscoverable ? 'rgba(59,130,246,0.05)' : '#F8FAFC',
-          }}
-        >
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              background: form.isDiscoverable ? 'rgba(59,130,246,0.14)' : 'rgba(148,163,184,0.15)',
-              color: form.isDiscoverable ? '#1D4ED8' : '#64748B',
-            }}
-          >
-            {form.isDiscoverable ? <Eye size={20} /> : <EyeOff size={20} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>
-              {form.isDiscoverable ? 'Visible in DM search' : 'Invisible in DM search'}
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
-              {form.isDiscoverable
-                ? 'Residents can find you when they search to start a chat.'
-                : 'Your name is hidden from the DM search. Existing chats keep working.'}
+              <div className="flex items-center gap-2 mt-4">
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                  className="flex-1 h-10 text-xs font-semibold rounded-xl"
+                  style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+                  {uploading ? 'Processing…' : form.profilePhoto ? 'Change photo' : 'Upload photo'}
+                </button>
+                {form.profilePhoto && (
+                  <button type="button" onClick={() => set('profilePhoto', '')}
+                    className="h-10 px-3 text-xs font-medium rounded-xl flex items-center gap-1"
+                    style={{ color: '#64748B', border: '1px solid rgba(15,23,42,0.08)' }}>
+                    <X size={12} /> Remove
+                  </button>
+                )}
+              </div>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFile} style={{ display: 'none' }} />
             </div>
           </div>
-          <div
-            className="relative w-11 h-6 rounded-full flex-shrink-0"
-            style={{ background: form.isDiscoverable ? '#3B82F6' : '#CBD5E1' }}
-          >
-            <div
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
-              style={{ left: form.isDiscoverable ? 'calc(100% - 22px)' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
-            />
-          </div>
-        </button>
 
-        <p className="text-[11px] mt-3 leading-relaxed" style={{ color: '#94A3B8' }}>
-          Group chat, alerts and estate broadcasts are unaffected.
-        </p>
-      </div>
-
-      {/* ── Change Password ─────────────────────────────────────────── */}
-      <div className="glass-card p-5 sm:p-6">
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2" style={{ color: '#64748B' }}>
-          <KeyRound size={13} /> Password
-        </h2>
-        {mustReset && (
-          <div className="rounded-2xl p-3 mb-3 flex items-start gap-2"
-               style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
-            <ShieldCheck size={16} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 12, color: '#92400E', lineHeight: 1.55 }}>
-              <strong>Temporary password detected.</strong> Set a new password before you can use the app.
+          {/* Sign out — desktop position */}
+          <button onClick={signOut} disabled={signingOut}
+            className="hidden lg:flex g-card w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-red-50/40 transition-colors">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+              <LogOut size={16} />
             </div>
-          </div>
-        )}
-        <div className="space-y-2.5">
-          {!mustReset && (
-            <input type={showPw ? 'text' : 'password'}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
-              style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', color: '#0F172A' }}
-              placeholder="Current password"
-              value={pw.current}
-              onChange={e => setPw({ ...pw, current: e.target.value })}
-            />
-          )}
-          <input type={showPw ? 'text' : 'password'}
-            className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', color: '#0F172A' }}
-            placeholder="New password (min. 6 characters)"
-            value={pw.next}
-            onChange={e => setPw({ ...pw, next: e.target.value })}
-          />
-          <input type={showPw ? 'text' : 'password'}
-            className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', color: '#0F172A' }}
-            placeholder="Confirm new password"
-            value={pw.confirm}
-            onChange={e => setPw({ ...pw, confirm: e.target.value })}
-          />
-          <label className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
-            <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} />
-            Show passwords
-          </label>
-          <button
-            onClick={submitPw}
-            disabled={pwSaving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-white transition-all active:scale-[0.98]"
-            style={{
-              background: pwSaving ? '#94A3B8' : 'linear-gradient(135deg, #3B82F6, #2563EB)',
-              padding: '12px', fontSize: 13,
-              boxShadow: '0 6px 16px rgba(59,130,246,0.3)',
-              cursor: pwSaving ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <Lock size={14} /> {pwSaving ? 'Changing…' : 'Change password'}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold" style={{ color: '#DC2626' }}>{signingOut ? 'Signing out…' : 'Sign out'}</div>
+              <div className="text-xs" style={{ color: '#94A3B8' }}>End your session on this device</div>
+            </div>
+            <ChevronRight size={16} className="text-slate-300" />
           </button>
-          <p className="text-[11px] mt-1" style={{ color: '#94A3B8' }}>
-            Forgot your current password?&nbsp;
-            <button
-              type="button"
-              onClick={async () => { try { await logout?.(); } catch {} navigate('/login?forgot=1', { replace: true }); }}
-              style={{ background: 'none', border: 'none', color: '#2563EB', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              Request a reset from your estate manager
+        </div>
+
+        {/* ── Right: settings sections ── */}
+        <div className="space-y-4 min-w-0">
+          {/* Profile details */}
+          <div className="g-card g-rise p-5" style={{ animationDelay: '60ms' }}>
+            <SectionHead icon={UserIcon} title="Profile details" hint="Shown to residents and estate staff" />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="g-label block mb-1.5">Full name</label>
+                <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)}
+                  className={inputCls} style={inputStyle} placeholder="Your name" />
+              </div>
+              <div>
+                <label className="g-label mb-1.5 flex items-center gap-1.5"><Phone size={11} /> Phone</label>
+                <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)}
+                  className={inputCls} style={inputStyle} placeholder="+234…" />
+              </div>
+            </div>
+            <div className="text-[11px] flex items-center gap-1.5 mt-3" style={{ color: '#94A3B8' }}>
+              <Mail size={11} /> <span className="truncate">{user?.email}</span> <span className="opacity-70 shrink-0">· can't be changed</span>
+            </div>
+          </div>
+
+          {/* Privacy */}
+          <div className="g-card g-rise p-5" style={{ animationDelay: '120ms' }}>
+            <SectionHead icon={form.isDiscoverable ? Eye : EyeOff} title="Privacy" hint="Group chat, alerts and estate broadcasts are unaffected." tone="slate" />
+            <button type="button" onClick={() => set('isDiscoverable', !form.isDiscoverable)}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all"
+              style={{
+                border: `1px solid ${form.isDiscoverable ? '#BFDBFE' : 'rgba(15,23,42,0.08)'}`,
+                background: form.isDiscoverable ? '#EFF6FF' : '#F8FAFC',
+              }}>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>
+                  {form.isDiscoverable ? 'Visible in DM search' : 'Invisible in DM search'}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                  {form.isDiscoverable
+                    ? 'Residents can find you when they search to start a chat.'
+                    : 'Your name is hidden from the DM search. Existing chats keep working.'}
+                </div>
+              </div>
+              <div className="relative w-12 h-7 rounded-full flex-shrink-0 transition-colors"
+                style={{ background: form.isDiscoverable ? '#3B82F6' : '#CBD5E1' }}>
+                <div className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all"
+                  style={{ left: form.isDiscoverable ? 'calc(100% - 26px)' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
             </button>
-          </p>
+          </div>
+
+          <button onClick={handleSave} disabled={saving || uploading}
+            className="w-full h-12 lg:h-11 flex items-center justify-center gap-2 rounded-2xl font-semibold text-white transition-all active:scale-[0.99]"
+            style={{
+              background: saving ? '#94A3B8' : 'linear-gradient(135deg,#3B82F6,#1D4ED8)',
+              fontSize: 14,
+              boxShadow: saving ? 'none' : '0 8px 20px -8px rgba(59,130,246,0.6)',
+              cursor: saving || uploading ? 'not-allowed' : 'pointer',
+            }}>
+            <Save size={16} />
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+
+          {/* Password */}
+          <div className="g-card g-rise p-5" style={{ animationDelay: '180ms', ...(mustReset ? { borderColor: 'rgba(245,158,11,0.45)' } : {}) }}>
+            <SectionHead icon={KeyRound} title="Password" hint={mustReset ? 'Choose a new password to continue' : 'You will be signed out after changing it'} tone={mustReset ? 'amber' : 'brand'} />
+            <div className="space-y-2.5">
+              {!mustReset && (
+                <input type={showPw ? 'text' : 'password'} className={inputCls} style={inputStyle}
+                  placeholder="Current password" value={pw.current}
+                  onChange={e => setPw({ ...pw, current: e.target.value })} />
+              )}
+              <div className="grid sm:grid-cols-2 gap-2.5">
+                <input type={showPw ? 'text' : 'password'} className={inputCls} style={inputStyle}
+                  placeholder="New password (min. 6 characters)" value={pw.next}
+                  onChange={e => setPw({ ...pw, next: e.target.value })} />
+                <input type={showPw ? 'text' : 'password'} className={inputCls} style={inputStyle}
+                  placeholder="Confirm new password" value={pw.confirm}
+                  onChange={e => setPw({ ...pw, confirm: e.target.value })} />
+              </div>
+              <label className="flex items-center gap-2 text-xs py-1" style={{ color: '#64748B' }}>
+                <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} className="accent-blue-600 w-4 h-4" />
+                Show passwords
+              </label>
+              <button onClick={submitPw} disabled={pwSaving}
+                className="w-full sm:w-auto sm:px-6 h-12 lg:h-11 flex items-center justify-center gap-2 rounded-2xl lg:rounded-xl font-semibold text-white transition-all active:scale-[0.98]"
+                style={{
+                  background: pwSaving ? '#94A3B8' : '#0F172A',
+                  fontSize: 13,
+                  cursor: pwSaving ? 'not-allowed' : 'pointer',
+                }}>
+                <Lock size={14} /> {pwSaving ? 'Changing…' : 'Change password'}
+              </button>
+              <p className="text-[11px] mt-1" style={{ color: '#94A3B8' }}>
+                Forgot your current password?&nbsp;
+                <button type="button"
+                  onClick={async () => { try { await logout?.(); } catch {} navigate('/login?forgot=1', { replace: true }); }}
+                  style={{ background: 'none', border: 'none', color: '#2563EB', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                  Request a reset from your estate manager
+                </button>
+              </p>
+            </div>
+          </div>
+
+          {/* Sign out — mobile position */}
+          <button onClick={signOut} disabled={signingOut}
+            className="lg:hidden w-full h-12 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm"
+            style={{ background: '#fff', color: '#DC2626', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <LogOut size={16} /> {signingOut ? 'Signing out…' : 'Sign out'}
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={handleSave}
-        disabled={saving || uploading}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white transition-all"
-        style={{
-          background: saving ? '#94A3B8' : 'linear-gradient(135deg, #3B82F6, #2563EB)',
-          padding: '14px',
-          fontSize: 14,
-          boxShadow: '0 8px 20px rgba(59,130,246,0.30)',
-          cursor: saving || uploading ? 'not-allowed' : 'pointer',
-        }}
-      >
-        <Save size={16} />
-        {saving ? 'Saving…' : 'Save changes'}
-      </button>
     </div>
   );
 }

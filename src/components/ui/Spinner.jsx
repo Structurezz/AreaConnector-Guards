@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 const BRAND = {
   "logo": "/icon-192.png",
   "mark": "AC",
-  "color": "#10B981",
-  "dark": "#047857",
+  "color": "#3B82F6",
+  "dark": "#1D4ED8",
   "track": "#E2E8F0",
   "name": [
     "Area",

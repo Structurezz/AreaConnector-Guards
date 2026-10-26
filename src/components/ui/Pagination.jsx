@@ -17,13 +17,13 @@ export default function Pagination({ page, pages, total, limit, onPage }) {
 
   const btnBase = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: 34, height: 34, borderRadius: 8, fontSize: 13, fontWeight: 500,
-    border: '1px solid #E2E8F0', cursor: 'pointer', transition: 'all .15s',
+    minWidth: 38, height: 38, padding: '0 6px', borderRadius: 11, fontSize: 13, fontWeight: 500,
+    border: '1px solid #E2E8F0', cursor: 'pointer', transition: 'all .15s', fontVariantNumeric: 'tabular-nums',
   };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingTop: 4 }}>
-      <span style={{ fontSize: 13, color: '#94A3B8' }}>
+      <span style={{ fontSize: 12, color: '#94A3B8' }}>
         Showing <strong style={{ color: '#475569' }}>{from}–{to}</strong> of <strong style={{ color: '#475569' }}>{total}</strong>
       </span>
 
@@ -45,9 +45,10 @@ export default function Pagination({ page, pages, total, limit, onPage }) {
               onClick={() => onPage(n)}
               style={{
                 ...btnBase,
-                background: n === page ? '#3B82F6' : '#FFF',
+                background: n === page ? 'linear-gradient(135deg,#3B82F6,#1D4ED8)' : '#FFF',
                 color: n === page ? '#FFF' : '#475569',
-                borderColor: n === page ? '#3B82F6' : '#E2E8F0',
+                borderColor: n === page ? '#2563EB' : '#E2E8F0',
+                boxShadow: n === page ? '0 4px 12px -4px rgba(59,130,246,0.55)' : 'none',
                 fontWeight: n === page ? 700 : 500,
               }}
             >

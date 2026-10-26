@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api';
-import { Eye, EyeOff, AlertCircle, CheckCircle, Shield, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, KeyRound, Mail, ShieldCheck, X, UserCheck, Package, Siren, LogOut, Car, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import Portal from '../components/ui/Portal';
+import { GuardMark } from '../components/layout/Sidebar';
 
 function ForgotPasswordModal({ initialEmail = '', onClose }) {
   const [email, setEmail] = useState(initialEmail);
@@ -22,6 +23,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
 
   return (
     <Portal>
+    <style>{AUTH_CSS}</style>
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 22, overflow: 'hidden', boxShadow: '0 30px 60px -20px rgba(0,0,0,0.5)', position: 'relative' }}>
         <button onClick={onClose} aria-label="Close"
@@ -33,23 +35,23 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
             <div style={{ width: 68, height: 68, borderRadius: 20, background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ShieldCheck size={30}/>
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: '0 0 6px' }}>Request sent</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', margin: '0 0 6px' }}>Request sent</h2>
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: '0 0 20px' }}>
               If an account exists for <strong>{email}</strong>, your estate manager has been notified. You'll receive a temporary password by email once they approve.
             </p>
             <button onClick={onClose}
-              style={{ background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
               Got it
             </button>
           </div>
         ) : (
           <>
-            <div style={{ background: 'linear-gradient(135deg,#1E293B,#2563EB)', padding: '28px 28px 22px', color: '#fff' }}>
+            <div style={{ background: 'radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,.38) 0%, transparent 60%), #07111F', padding: '28px 28px 22px', color: '#fff' }}>
               <div style={{ width: 54, height: 54, borderRadius: 16, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                 <KeyRound size={24}/>
               </div>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 2 }}>Password help</div>
-              <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Ask your estate manager to reset it</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.25, color: '#fff' }}>Ask your estate manager to reset it</h2>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '8px 0 0', lineHeight: 1.5 }}>
                 Enter your account email — your estate manager will approve a reset and we'll email you a temporary password.
               </p>
@@ -58,15 +60,10 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
               <label style={{ display: 'block', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Email address</label>
               <div style={{ position: 'relative', marginBottom: 18 }}>
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 14px 12px 40px', fontSize: 14, color: '#0F172A', outline: 'none' }} />
+                  placeholder="you@example.com" className="ga-input" style={{ paddingLeft: 40 }} />
                 <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}/>
               </div>
-              <button type="submit" disabled={submitting}
-                style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                  background: submitting ? '#94A3B8' : 'linear-gradient(135deg,#3B82F6,#2563EB)',
-                  color: '#fff', fontWeight: 800, fontSize: 15,
-                  boxShadow: '0 6px 16px rgba(59,130,246,0.4)', cursor: submitting ? 'wait' : 'pointer' }}>
+              <button type="submit" disabled={submitting} className="ga-btn" style={submitting ? { background: '#94A3B8', boxShadow: 'none', cursor: 'wait' } : undefined}>
                 {submitting ? 'Sending request…' : 'Request password reset'}
               </button>
               <p style={{ fontSize: 11, color: '#94A3B8', margin: '12px 0 0', textAlign: 'center', lineHeight: 1.55 }}>
@@ -81,357 +78,206 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
   );
 }
 
-/* ── Ad sidebar slides (desktop only) ── */
-const AD_SLIDES = [
-  {
-    tag: 'Security Guard Portal',
-    headline: 'What is AreaConnect Guard?',
-    body: 'AreaConnect Guard is the dedicated gate security terminal. Instantly verify visitor access codes, manage check-ins and check-outs, and respond to live estate alerts — all from one powerful interface.',
-    points: ['Instant QR & Code Verification', 'Check-in & Check-out Logging', 'Real-time Alert Notifications', 'Session Entry Log'],
-    accent: '#3B82F6',
-    num: '01',
-  },
-  {
-    tag: 'Gate Verification System',
-    headline: 'Verify in Seconds',
-    body: "Residents pre-register visitors through AreaMates and generate unique access codes. At the gate, guards enter or scan the code — the system instantly shows the visitor's details, expected time, and host information.",
-    points: ['6-digit Unique Access Codes', 'Real-time Visitor Details', 'Host Resident & Unit Info', 'Blacklist Enforcement'],
-    accent: '#60A5FA',
-    num: '02',
-  },
-  {
-    tag: 'Live Alert System',
-    headline: 'Always First to Know',
-    body: 'Receive instant push notifications for security threats, fire, medical, and other emergencies raised by residents. Acknowledge and act from the Guard portal with full context.',
-    points: ['Multi-type Alert Categories', 'Severity Levels (Critical–Low)', 'Resident & Unit Info on Alerts', 'Siren & Sound Notifications'],
-    accent: '#93C5FD',
-    num: '03',
-  },
+/* ── Shared auth look (also used by Register) ── */
+export const AUTH_CSS = `
+  .ga-input {
+    width: 100%; height: 44px; padding: 0 14px; border-radius: 12px;
+    background: #fff; border: 1px solid #E2E8F0; color: #0F172A;
+    font-size: 14px; outline: none; box-sizing: border-box;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .ga-input::placeholder { color: #94A3B8; }
+  .ga-input:hover { border-color: #CBD5E1; }
+  .ga-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+  .ga-label { display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px; }
+  .ga-btn {
+    width: 100%; height: 48px; border-radius: 14px; border: none; cursor: pointer;
+    background: linear-gradient(135deg,#3B82F6,#1D4ED8); color: #fff;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.005em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 10px 24px -10px rgba(59,130,246,0.75);
+    transition: filter .15s, transform .1s, box-shadow .15s;
+  }
+  .ga-btn:hover { filter: brightness(1.06); }
+  .ga-btn:active { transform: scale(0.99); }
+  .ga-btn:disabled { cursor: not-allowed; filter: none; opacity: .65; box-shadow: none; }
+  .ga-link { color: #2563EB; font-weight: 600; text-decoration: none; }
+  .ga-link:hover { color: #1D4ED8; text-decoration: underline; }
+  @media (min-width: 1024px) { .ga-btn { height: 46px; border-radius: 12px; } }
+  @keyframes gaIn { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes gaRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes gaPing { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.6); opacity: 0; } }
+  .ga-rise { animation: gaRise .6s cubic-bezier(.22,1,.36,1) both; }
+  .ga-in { animation: gaIn .45s cubic-bezier(.22,1,.36,1) both; }
+`;
+
+// Sample data only — illustrates the live gate feed on the sign-in screen.
+const SAMPLE_ACTIVITY = [
+  { icon: UserCheck, tone: '#10B981', title: 'Visitor checked in',   meta: 'Adaeze O. · Block C, Unit 4', tag: 'Gate A' },
+  { icon: Package,   tone: '#F59E0B', title: 'Delivery cleared',     meta: 'Courier · Unit 12B',          tag: 'Gate B' },
+  { icon: Siren,     tone: '#EF4444', title: 'Alert acknowledged',   meta: 'Noise report · Block A',      tag: 'Patrol' },
+  { icon: LogOut,    tone: '#94A3B8', title: 'Visitor checked out',  meta: 'Tunde B. · Unit 7',           tag: 'Gate A' },
+  { icon: Car,       tone: '#3B82F6', title: 'Vehicle pass verified', meta: 'LND 482 KJ · Unit 3',        tag: 'Gate B' },
+  { icon: Lock,      tone: '#60A5FA', title: 'Access code verified', meta: '6-digit code · Unit 9A',      tag: 'Gate A' },
 ];
+const AGO = ['now', '2m', '5m'];
 
-function AdSidebar() {
-  const [idx, setIdx] = useState(0);
-  const [out, setOut] = useState(false);
+function useTicker(ms = 2500) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), ms); return () => clearInterval(t); }, [ms]);
+  return tick;
+}
 
-  const go = (i) => { setOut(true); setTimeout(() => { setIdx(i); setOut(false); }, 280); };
-
-  useEffect(() => {
-    const t = setInterval(() => go((idx + 1) % AD_SLIDES.length), 5000);
-    return () => clearInterval(t);
-  }, [idx]);
-
-  const s = AD_SLIDES[idx];
-
+function ActivityRow({ ev, ago, fresh }) {
+  const Icon = ev.icon;
   return (
-    <div className="hidden lg:flex" style={{
-      flex: 1,
-      background: 'linear-gradient(180deg,#060E1A 0%,#0B1626 100%)',
-      flexDirection: 'column', padding: '48px 52px',
-      position: 'relative', overflow: 'hidden',
-    }}>
-      <div style={{
-        position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)',
-        width: 260, height: 260, borderRadius: '50%', pointerEvents: 'none',
-        background: `radial-gradient(circle, ${s.accent}20 0%, transparent 70%)`,
-        transition: 'background 0.5s',
-      }}/>
-      <div style={{
-        position: 'absolute', bottom: -60, right: -40, pointerEvents: 'none',
-        width: 200, height: 200, borderRadius: '50%',
-        background: `radial-gradient(circle, ${s.accent}12 0%, transparent 70%)`,
-        transition: 'background 0.5s',
-      }}/>
-
-      {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, position: 'relative', zIndex: 1 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 11,
-          background: 'linear-gradient(135deg,#3B82F6,#2563EB)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
-            <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none"/>
-            <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.2)"/>
-            <path d="M20 14l-6 3.5v7L20 28l6-3.5v-7L20 14z" fill="rgba(255,255,255,0.65)"/>
-            <rect x="18" y="18" width="4" height="5" rx="1" fill="white"/>
-            <circle cx="20" cy="17" r="1.5" fill="white"/>
-          </svg>
-        </div>
-        <span style={{ fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '-0.02em' }}>
-          Area<span style={{ color: '#3B82F6' }}>Connect</span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600 }}> Guard</span>
-        </span>
+    <div className={fresh ? 'ga-in' : ''} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, background: fresh ? 'rgba(59,130,246,0.10)' : 'transparent', transition: 'background .6s' }}>
+      <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${ev.tone}22`, color: ev.tone }}>
+        <Icon size={16} />
       </div>
-
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.15)', position: 'relative', zIndex: 1 }}>
-        {s.num} <span style={{ color: 'rgba(255,255,255,0.08)' }}>/ 03</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</div>
+        <div style={{ fontSize: 11.5, color: 'rgba(226,232,240,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.meta}</div>
       </div>
-
-      <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        paddingTop: 20, paddingBottom: 20, position: 'relative', zIndex: 1,
-        opacity: out ? 0 : 1, transform: out ? 'translateY(10px)' : 'translateY(0)',
-        transition: 'opacity 0.28s, transform 0.28s',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-          <span style={{ width: 22, height: 2, borderRadius: 99, background: s.accent }}/>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: s.accent, textTransform: 'uppercase' }}>{s.tag}</span>
-        </div>
-
-        <h3 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.03em', color: '#fff', marginBottom: 12 }}>
-          {s.headline}
-        </h3>
-
-        <div style={{ width: 30, height: 3, borderRadius: 99, background: `linear-gradient(90deg,${s.accent},transparent)`, marginBottom: 16 }}/>
-
-        <p style={{ fontSize: 13, lineHeight: 1.7, color: 'rgba(255,255,255,0.42)', marginBottom: 24 }}>{s.body}</p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {s.points.map(pt => (
-            <div key={pt} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <CheckCircle size={13} color={s.accent} style={{ flexShrink: 0, marginTop: 2 }}/>
-              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>{pt}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 6, paddingBottom: 18, position: 'relative', zIndex: 1 }}>
-        {AD_SLIDES.map((_, i) => (
-          <button key={i} onClick={() => go(i)} style={{
-            width: i === idx ? 24 : 6, height: 6, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
-            background: i === idx ? s.accent : 'rgba(255,255,255,0.15)',
-            transition: 'all 0.35s',
-          }}/>
-        ))}
-      </div>
-
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.55)' }}>
-          Area<span style={{ color: '#10B981' }}>Connect</span>
-        </div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 3 }}>Smart Estate Technology</div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(226,232,240,0.55)' }}>{ev.tag}</div>
+        <div style={{ fontSize: 10.5, color: 'rgba(226,232,240,0.35)' }}>{ago}</div>
       </div>
     </div>
   );
 }
 
-/* ── Mobile CSS ── */
-const MOBILE_CSS = `
-  @keyframes sgOrb1 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    35% { transform: translate(30px,-42px) scale(1.09); }
-    68% { transform: translate(-20px,28px) scale(0.93); }
-  }
-  @keyframes sgOrb2 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    40% { transform: translate(-34px,22px) scale(1.06); }
-    72% { transform: translate(24px,-26px) scale(0.95); }
-  }
-  @keyframes sgPulse {
-    0% { transform: scale(1); opacity: 0.55; }
-    100% { transform: scale(2.6); opacity: 0; }
-  }
-  @keyframes sgCardIn {
-    0% { opacity: 0; transform: translateY(36px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes sgHeroIn {
-    0% { opacity: 0; transform: scale(0.92) translateY(-10px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes sgScan {
-    0% { top: -2px; opacity: 0.07; }
-    100% { top: 101%; opacity: 0.01; }
-  }
-  @keyframes sgGlow {
-    0%,100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
-  .sg-input {
-    width: 100%; padding: 13px 16px; border-radius: 12px;
-    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11);
-    color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s;
-  }
-  .sg-input:focus { border-color: rgba(59,130,246,0.5); }
-  .sg-input::placeholder { color: rgba(255,255,255,0.3); }
-`;
-
-function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot }) {
+function LiveDot() {
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#0A1628 100%)', position: 'relative', overflow: 'hidden' }}>
-      <style>{MOBILE_CSS}</style>
+    <span style={{ position: 'relative', display: 'inline-flex', width: 8, height: 8 }}>
+      <span style={{ position: 'absolute', inset: 0, borderRadius: 99, background: '#10B981', animation: 'gaPing 1.8s ease-out infinite' }} />
+      <span style={{ position: 'relative', width: 8, height: 8, borderRadius: 99, background: '#10B981' }} />
+    </span>
+  );
+}
 
-      {/* Orb 1 — top right */}
-      <div style={{
-        position: 'fixed', top: -100, right: -80, width: 380, height: 380,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(59,130,246,0.22) 0%, transparent 65%)',
-        animation: 'sgOrb1 10s ease-in-out infinite',
-      }}/>
-      {/* Orb 2 — bottom left */}
-      <div style={{
-        position: 'fixed', bottom: -120, left: -100, width: 340, height: 340,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 65%)',
-        animation: 'sgOrb2 13s 2s ease-in-out infinite',
-      }}/>
-      {/* Scan line */}
-      <div style={{
-        position: 'fixed', left: 0, right: 0, height: 1, pointerEvents: 'none',
-        background: 'linear-gradient(to right, transparent, rgba(59,130,246,0.3), transparent)',
-        animation: 'sgScan 9s linear infinite',
-      }}/>
-
-      {/* ── Hero ── */}
-      <div style={{
-        textAlign: 'center', padding: '64px 24px 36px',
-        position: 'relative', zIndex: 1,
-        animation: 'sgHeroIn 0.8s cubic-bezier(0.22,1,0.36,1) both',
-      }}>
-        {/* Icon + pulse rings */}
-        <div style={{ position: 'relative', display: 'inline-flex', marginBottom: 22 }}>
-          <div style={{
-            position: 'absolute', inset: -18, borderRadius: '50%',
-            border: '1.5px solid rgba(59,130,246,0.45)',
-            animation: 'sgPulse 2.6s ease-out infinite',
-          }}/>
-          <div style={{
-            position: 'absolute', inset: -9, borderRadius: '50%',
-            border: '1.5px solid rgba(59,130,246,0.45)',
-            animation: 'sgPulse 2.6s 0.7s ease-out infinite',
-          }}/>
-          <div style={{
-            width: 76, height: 76, borderRadius: 22,
-            background: 'linear-gradient(135deg,#3B82F6,#2563EB)',
-            boxShadow: '0 0 56px rgba(59,130,246,0.55), 0 12px 40px rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'sgGlow 3s ease-in-out infinite',
-          }}>
-            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-              <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.35)" strokeWidth="1" fill="none"/>
-              <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.2)"/>
-              <path d="M20 14l-6 3.5v7L20 28l6-3.5v-7L20 14z" fill="rgba(255,255,255,0.65)"/>
-              <rect x="18" y="18" width="4" height="5" rx="1" fill="white"/>
-              <circle cx="20" cy="17" r="1.5" fill="white"/>
-            </svg>
+function GateActivityCard() {
+  const tick = useTicker(2500);
+  const n = SAMPLE_ACTIVITY.length;
+  const rows = [0, 1, 2].map((k) => ({ key: tick - k, ev: SAMPLE_ACTIVITY[((tick - k) % n + n) % n], ago: AGO[k], fresh: k === 0 }));
+  return (
+    <div style={{ width: '100%', maxWidth: 420, borderRadius: 20, padding: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', boxShadow: '0 30px 60px -30px rgba(0,0,0,0.6)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LiveDot />
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.7)' }}>Gate activity</span>
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.35)' }}>Preview</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {rows.map((r) => <ActivityRow key={r.key} ev={r.ev} ago={r.ago} fresh={r.fresh} />)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 10, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        {[['Checked in', '38'], ['Expected', '12'], ['Open alerts', '0']].map(([l, v]) => (
+          <div key={l} style={{ padding: '0 4px' }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+            <div style={{ fontSize: 10.5, color: 'rgba(226,232,240,0.45)' }}>{l}</div>
           </div>
-        </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.045em', color: '#fff', marginBottom: 4 }}>
-          Area<span style={{ color: '#60A5FA' }}>Connect</span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 20, fontWeight: 700 }}> Guard</span>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 24 }}>
-          Security Portal
-        </div>
+function MobileTicker() {
+  const tick = useTicker(2500);
+  const ev = SAMPLE_ACTIVITY[tick % SAMPLE_ACTIVITY.length];
+  const Icon = ev.icon;
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, maxWidth: '100%', padding: '7px 12px 7px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <LiveDot />
+      <span key={tick} className="ga-in" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 12, color: 'rgba(226,232,240,0.8)' }}>
+        <Icon size={13} style={{ color: ev.tone, flexShrink: 0 }} />
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title} · {ev.tag}</span>
+      </span>
+    </div>
+  );
+}
 
-        {/* Feature pills */}
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 7 }}>
-          {['Gate Verification', 'Entry Log', 'Live Alerts', 'Access Control'].map(f => (
-            <span key={f} style={{
-              fontSize: 11, fontWeight: 600, padding: '5px 13px', borderRadius: 99,
-              background: 'rgba(59,130,246,0.12)', color: '#93C5FD',
-              border: '1px solid rgba(59,130,246,0.22)',
-            }}>{f}</span>
-          ))}
+function Wordmark({ size = 16 }) {
+  return (
+    <div style={{ fontSize: size, fontWeight: 700, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
+      Area<span style={{ color: '#60A5FA' }}>Connect</span>
+      <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}> Guard</span>
+    </div>
+  );
+}
+
+function BrandPanel() {
+  return (
+    <div className="relative overflow-hidden lg:w-[52%] lg:min-h-screen flex flex-col px-5 pt-8 pb-12 lg:px-14 lg:py-12" style={{ background: '#07111F' }}>
+      {/* glow + grid */}
+      <div aria-hidden style={{ position: 'absolute', top: '-25%', left: '-20%', width: '80%', paddingBottom: '80%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.32) 0%, transparent 62%)', pointerEvents: 'none' }} />
+      <div aria-hidden style={{ position: 'absolute', bottom: '-30%', right: '-25%', width: '70%', paddingBottom: '70%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.06, backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '44px 44px', WebkitMaskImage: 'radial-gradient(ellipse at 30% 20%, #000 0%, transparent 75%)', maskImage: 'radial-gradient(ellipse at 30% 20%, #000 0%, transparent 75%)' }} />
+
+      {/* Brand */}
+      <div className="relative flex items-center gap-3">
+        <GuardMark size={40} />
+        <div>
+          <Wordmark size={17} />
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.4)', marginTop: 3 }}>Security Portal</div>
         </div>
       </div>
 
-      {/* Separator */}
-      <div style={{
-        margin: '0 20px 0',
-        height: 1, background: 'linear-gradient(to right, transparent, rgba(59,130,246,0.18), transparent)',
-      }}/>
-
-      {/* ── Form card ── */}
-      <div style={{
-        margin: '0 12px', padding: '28px 24px 36px',
-        borderRadius: '28px 28px 0 0',
-        background: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderBottom: 'none',
-        animation: 'sgCardIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both',
-        position: 'relative', zIndex: 1,
-      }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to the gate system</p>
-
-        {/* Error */}
-        {error && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
-            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', fontSize: 13,
-          }}>
-            <AlertCircle size={14}/> {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {/* Email */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Email Address
-            </label>
-            <input type="email" className="sg-input" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              required autoComplete="email"/>
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input type={showPw ? 'text' : 'password'} className="sg-input" placeholder="••••••••"
-                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                required autoComplete="current-password" style={{ paddingRight: 44 }}/>
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
-                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'right', marginBottom: 18 }}>
-            <button type="button" onClick={openForgot}
-              style={{ background: 'none', border: 'none', color: '#93C5FD', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-              Forgot password?
-            </button>
-          </div>
-
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: '15px', borderRadius: 14, border: 'none',
-            background: loading ? 'rgba(59,130,246,0.4)' : 'linear-gradient(135deg,#3B82F6,#2563EB)',
-            color: '#fff', fontWeight: 700, fontSize: 15,
-            boxShadow: loading ? 'none' : '0 6px 24px rgba(59,130,246,0.35)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            {loading ? (
-              <>
-                <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-                </svg>
-                Signing in…
-              </>
-            ) : 'Sign In to Gate System'}
-          </button>
-
-          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            Don't have an account?{' '}
-            <Link to="/register" style={{ color: '#60A5FA', fontWeight: 600 }}>Sign up</Link>
-          </p>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
-          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      {/* Headline */}
+      <div className="relative lg:flex-1 flex flex-col justify-center mt-7 lg:mt-0 lg:py-10 ga-rise">
+        <h2 className="text-[26px] lg:text-[40px]" style={{ fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#fff', margin: 0, maxWidth: 480 }}>
+          Every gate, calm<br className="hidden lg:block" /> and <span style={{ color: '#60A5FA' }}>in control.</span>
+        </h2>
+        <p className="text-[13px] lg:text-[15px]" style={{ color: 'rgba(226,232,240,0.6)', lineHeight: 1.6, margin: '12px 0 0', maxWidth: 440 }}>
+          Verify visitors in seconds, log every entry and respond to estate alerts the moment they happen.
         </p>
+
+        <div className="mt-5 lg:hidden"><MobileTicker /></div>
+        <div className="hidden lg:block mt-9"><GateActivityCard /></div>
       </div>
+
+      {/* Footer */}
+      <div className="relative hidden lg:flex items-center justify-between" style={{ fontSize: 11, color: 'rgba(226,232,240,0.35)' }}>
+        <span>Powered by <span style={{ fontWeight: 600, color: 'rgba(226,232,240,0.55)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864</span>
+        <span>Secure Estate Technology</span>
+      </div>
+    </div>
+  );
+}
+
+export function AuthShell({ children }) {
+  return (
+    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: '#07111F' }}>
+      <style>{AUTH_CSS}</style>
+      <BrandPanel />
+      <div className="relative z-[1] flex-1 bg-white -mt-6 lg:mt-0 rounded-t-[28px] lg:rounded-none px-5 pt-8 pb-10 sm:px-8 lg:px-12 lg:py-12 lg:flex lg:items-center lg:justify-center lg:overflow-y-auto"
+        style={{ boxShadow: '0 -12px 30px -18px rgba(0,0,0,0.5)' }}>
+        <div className="w-full max-w-[400px] mx-auto ga-rise" style={{ animationDelay: '80ms' }}>
+          {children}
+          <p className="lg:hidden" style={{ textAlign: 'center', marginTop: 28, fontSize: 11, color: '#94A3B8', letterSpacing: '0.02em' }}>
+            Powered by <span style={{ fontWeight: 600, color: '#64748B' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+export function AuthError({ children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 12, marginBottom: 16, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13, lineHeight: 1.45 }}>
+      <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 2 }}/> <span>{children}</span>
     </div>
   );
 }
@@ -475,125 +321,61 @@ export default function Login() {
   };
 
   const openForgot = () => setForgotOpen(true);
-  const shared = { form, setForm, showPw, setShowPw, loading, error, handleSubmit, openForgot };
 
   return (
     <>
       {forgotOpen && <ForgotPasswordModal initialEmail={form.email} onClose={() => setForgotOpen(false)} />}
 
-      {/* ── Mobile ── */}
-      <div className="lg:hidden">
-        <MobileLogin {...shared}/>
-      </div>
-
-      {/* ── Desktop: sidebar + form ── */}
-      <div className="hidden lg:flex min-h-screen" style={{ background: '#060E1A' }}>
-        <AdSidebar />
-
-        {/* Form panel */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto', minHeight: '100vh', background: '#F8FAFC', padding: '40px 24px' }}>
-          <div className="w-full max-w-md">
-            {/* Brand mark */}
-            <div className="mb-9">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-                <div style={{
-                  width: 54, height: 54, borderRadius: 15,
-                  background: 'linear-gradient(135deg,#3B82F6,#2563EB)',
-                  boxShadow: '0 0 24px rgba(59,130,246,0.25), 0 4px 12px rgba(0,0,0,0.12)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <Shield size={26} color="white"/>
-                </div>
-                <div>
-                  <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.03em', color: '#0F172A' }}>
-                    Area<span style={{ color: '#3B82F6' }}>Connect</span>
-                    <span style={{ color: 'rgba(0,0,0,0.3)', fontSize: 16, fontWeight: 600 }}> Guard</span>
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 2, color: '#94A3B8' }}>
-                    Security Portal
-                  </div>
-                </div>
-              </div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: '#0F172A', marginBottom: 6 }}>Welcome back</h1>
-              <p style={{ fontSize: 14, color: '#475569' }}>Sign in to the gate system</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4" style={{
-              background: 'linear-gradient(135deg,rgba(59,130,246,0.04) 0%,#FFFFFF 100%)',
-              border: '1px solid rgba(59,130,246,0.18)',
-              borderRadius: 16, padding: 24,
-            }}>
-              {error && (
-                <div className="flex items-center gap-2 rounded-xl p-3 text-sm"
-                  style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>
-                  <AlertCircle size={15} className="shrink-0"/> {error}
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: '#64748B' }}>Email Address</label>
-                <input type="email" className="input-field" placeholder="you@example.com"
-                  value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                  required autoComplete="email"/>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: '#64748B' }}>Password</label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} className="input-field pr-11"
-                    placeholder="••••••••" value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    required autoComplete="current-password"/>
-                  <button type="button" onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ color: '#94A3B8' }}
-                    onMouseOver={e => e.currentTarget.style.color = '#475569'}
-                    onMouseOut={e  => e.currentTarget.style.color = '#94A3B8'}>
-                    {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-end -mt-1">
-                <button type="button" onClick={openForgot}
-                  style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                  Forgot password?
-                </button>
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all mt-2"
-                style={{
-                  background: loading ? 'rgba(59,130,246,0.5)' : 'linear-gradient(135deg,#3B82F6,#2563EB)',
-                  color: 'white', boxShadow: loading ? 'none' : '0 4px 14px rgba(59,130,246,0.35)',
-                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-                }}>
-                {loading ? (
-                  <>
-                    <svg className="animate-spin" width={15} height={15} viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-                    </svg>
-                    Signing in…
-                  </>
-                ) : 'Sign In to Gate System'}
-              </button>
-              <p className="text-center text-sm pt-1" style={{ color: '#94A3B8' }}>
-                Don't have an account?{' '}
-                <Link to="/register" className="font-medium transition-colors" style={{ color: '#60A5FA' }}
-                  onMouseOver={e => e.currentTarget.style.color = '#3B82F6'}
-                  onMouseOut={e  => e.currentTarget.style.color = '#60A5FA'}>
-                  Sign up
-                </Link>
-              </p>
-            </form>
-
-            <p className="text-center text-xs mt-10" style={{ color: '#CBD5E1' }}>
-              © 2025 AreaConnect · Secure Estate Technology
-            </p>
-            <p className="text-[11px] text-slate-400 text-center mt-2 tracking-wide">
-              Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
-            </p>
-          </div>
+      <AuthShell>
+        <div style={{ marginBottom: 24 }}>
+          <div className="g-label" style={{ color: '#2563EB', marginBottom: 6 }}>Guard sign in</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#0F172A', margin: 0 }}>Welcome back</h1>
+          <p style={{ fontSize: 14, color: '#475569', margin: '4px 0 0' }}>Sign in to the gate system</p>
         </div>
-      </div>
+
+        {error && <AuthError>{error}</AuthError>}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 14 }}>
+            <label className="ga-label" htmlFor="login-email">Email address</label>
+            <input id="login-email" type="email" className="ga-input" placeholder="you@example.com"
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+              required autoComplete="email"/>
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <label className="ga-label" htmlFor="login-password">Password</label>
+              <button type="button" onClick={openForgot}
+                style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                Forgot password?
+              </button>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input id="login-password" type={showPw ? 'text' : 'password'} className="ga-input" placeholder="••••••••"
+                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                required autoComplete="current-password" style={{ paddingRight: 46 }}/>
+              <button type="button" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'}
+                style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 38, height: 38, borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading} className="ga-btn" style={{ marginTop: 20 }}>
+            {loading ? (<><Spinner /> Signing in…</>) : 'Sign in'}
+          </button>
+
+          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748B' }}>
+            Don't have an account?{' '}
+            <Link to="/register" className="ga-link">Sign up</Link>
+          </p>
+        </form>
+
+        <div className="hidden lg:block" style={{ marginTop: 40, paddingTop: 16, borderTop: '1px solid #F1F5F9', textAlign: 'center', fontSize: 11, color: '#94A3B8' }}>
+          © {new Date().getFullYear()} AreaConnect · Secure Estate Technology
+        </div>
+      </AuthShell>
     </>
   );
 }

@@ -9,7 +9,7 @@
     --bg:          #F8FAFC;
     --surface:     #FFFFFF;
     --raised:      #F1F5F9;
-    --elevated:    #EEF2FF;
+    --elevated:    #EFF6FF;
     --border:      rgba(15,23,42,0.08);
     --border-md:   rgba(15,23,42,0.13);
     --text:        #0F172A;
@@ -17,8 +17,10 @@
     --text-dim:    #94A3B8;
     --text-hint:   #CBD5E1;
     --accent:      #3B82F6;
+    --accent-dark: #1D4ED8;
     --accent-dim:  rgba(59,130,246,0.10);
-    --accent-glow: rgba(59,130,246,0.20);
+    --accent-glow: rgba(59,130,246,0.22);
+    --nav:         #07111F;
     --danger:      #EF4444;
   }
 
@@ -230,10 +232,10 @@
     font-weight: 600;
     letter-spacing: 0.01em;
   }
-  .badge-green  { background: #ECFDF5;  color: #2563EB; border: 1px solid #A7F3D0; }
+  .badge-green  { background: #ECFDF5;  color: #047857; border: 1px solid #A7F3D0; }
   .badge-red    { background: #FEF2F2;  color: #DC2626; border: 1px solid #FECACA; }
   .badge-yellow { background: #FFFBEB;  color: #B45309; border: 1px solid #FDE68A; }
-  .badge-blue   { background: #EFF6FF;  color: #2563EB; border: 1px solid #BFDBFE; }
+  .badge-blue   { background: #EFF6FF;  color: #1D4ED8; border: 1px solid #BFDBFE; }
   .badge-gold   { background: #EFF6FF;  color: #2563EB; border: 1px solid #BFDBFE; }
   .badge-gray   { background: #F8FAFC;  color: #64748B; border: 1px solid #E2E8F0; }
 
@@ -346,3 +348,16 @@
 @keyframes sheetPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 .sheet-panel { animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
 @media (min-width: 640px) { .sheet-panel { animation: sheetPop 0.2s ease-out; } }
+
+
+/* ── Guard app v2 ─────────────────────────────────────────────────── */
+.g-card { background: #fff; border: 1px solid rgba(15,23,42,0.08); border-radius: 18px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+.g-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #94A3B8; }
+@keyframes gPing { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes gRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes gAlarm { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); } 50% { box-shadow: 0 0 0 18px rgba(239,68,68,0); } }
+@keyframes gSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.g-rise { animation: gRise .5s cubic-bezier(.22,1,.36,1) backwards; }
+.g-alarm { animation: gAlarm 1.2s ease-out infinite; }
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: none; } }
+.animate-slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16,1,0.3,1); }

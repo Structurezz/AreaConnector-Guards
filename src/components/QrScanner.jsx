@@ -3,6 +3,39 @@ import QrScannerLib from 'qr-scanner';
 import { X, Zap, ZapOff, Camera, SwitchCamera, AlertTriangle } from 'lucide-react';
 import Portal from './ui/Portal';
 
+// Visual skin for qr-scanner's own scan-region overlay (it is positioned by the
+// library exactly over the real scan region): dark surround, blue corner
+// brackets and a sweeping scan line. Styling only — no behaviour change.
+const SCAN_CSS = `
+.gate-qr .scan-region-highlight {
+  border-radius: 22px;
+  box-shadow: 0 0 0 200vmax rgba(2, 6, 23, 0.58);
+  overflow: visible;
+}
+.gate-qr .scan-region-highlight-svg {
+  stroke: #3B82F6 !important;
+  stroke-width: 6 !important;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.65));
+}
+.gate-qr .code-outline-highlight {
+  stroke: #60A5FA !important;
+}
+.gate-qr .scan-region-highlight::after {
+  content: '';
+  position: absolute;
+  left: 7%; right: 7%; top: 6%;
+  height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(59,130,246,0), #60A5FA 20%, #3B82F6 50%, #60A5FA 80%, rgba(59,130,246,0));
+  box-shadow: 0 0 14px 2px rgba(59, 130, 246, 0.55);
+  animation: gateQrSweep 2.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes gateQrSweep { from { top: 6%; } to { top: 94%; } }
+@media (prefers-reduced-motion: reduce) {
+  .gate-qr .scan-region-highlight::after { animation: none; top: 50%; }
+}
+`;
+
 /**
  * Full-screen QR scanner modal.
  *
@@ -105,9 +138,10 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
 
   return (
     <Portal>
-    <div style={{
+    <style>{SCAN_CSS}</style>
+    <div className="gate-qr" style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: '#000',
+      background: '#020617',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Video */}
@@ -122,7 +156,7 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
         {/* Scrim gradients so controls stay readable */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.60) 100%)',
+          background: 'linear-gradient(180deg, rgba(2,6,23,0.70) 0%, rgba(2,6,23,0) 22%, rgba(2,6,23,0) 72%, rgba(2,6,23,0.75) 100%)',
         }} />
 
         {/* Top bar */}
@@ -136,19 +170,20 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
           <button
             onClick={onClose}
             style={{
-              width: 40, height: 40, borderRadius: 12, border: 'none',
-              background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
+              width: 44, height: 44, borderRadius: 14,
+              background: 'rgba(7,17,31,0.55)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.14)',
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}>
             <X size={18} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
-                          color: 'rgba(255,255,255,0.70)' }}>
-              Gate Security
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
+                          color: '#BFDBFE' }}>
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: '#3B82F6', boxShadow: '0 0 0 3px rgba(59,130,246,0.25)' }} />
+              Gate security · camera live
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 2 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginTop: 2 }}>
               {title}
             </div>
           </div>
@@ -157,8 +192,8 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
               onClick={switchCamera}
               title="Switch camera"
               style={{
-                width: 40, height: 40, borderRadius: 12, border: 'none',
-                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
+                width: 44, height: 44, borderRadius: 14,
+                background: 'rgba(7,17,31,0.55)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.14)',
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}>
@@ -169,14 +204,19 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
 
         {/* Hint */}
         <div style={{
-          position: 'absolute', left: 0, right: 0, bottom: 110,
-          textAlign: 'center',
-          color: 'rgba(255,255,255,0.85)',
-          fontSize: 13, fontWeight: 600,
-          padding: '0 24px',
-          textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+          position: 'absolute', left: 0, right: 0, bottom: 28,
+          display: 'flex', justifyContent: 'center', padding: '0 24px', pointerEvents: 'none',
         }}>
-          Point the camera at the visitor's QR pass
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '9px 14px', borderRadius: 999,
+            background: 'rgba(7,17,31,0.65)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(59,130,246,0.35)',
+            color: '#fff', fontSize: 13, fontWeight: 600,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: '#3B82F6' }} />
+            Point the camera at the visitor's QR pass
+          </span>
         </div>
 
         {/* Error overlay */}
@@ -208,9 +248,9 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
               <button
                 onClick={onClose}
                 style={{
-                  width: '100%', padding: '12px', borderRadius: 12, border: 'none',
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  width: '100%', border: 'none',
+                  background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+                  color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', height: 48, borderRadius: 14,
                 }}>
                 Close
               </button>
@@ -224,15 +264,17 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
         padding: 20,
         paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
         display: 'flex', alignItems: 'center', gap: 12,
-        background: '#000',
+        background: '#07111F',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
       }}>
         <button
           onClick={toggleTorch}
           disabled={!hasTorch}
           style={{
             width: 56, height: 56, borderRadius: 16, border: 'none', cursor: hasTorch ? 'pointer' : 'not-allowed',
-            background: torchOn ? '#fff' : 'rgba(255,255,255,0.14)',
-            color: torchOn ? '#1D4ED8' : '#fff',
+            background: torchOn ? '#3B82F6' : 'rgba(255,255,255,0.10)',
+            color: '#fff',
+            boxShadow: torchOn ? '0 0 0 4px rgba(59,130,246,0.25)' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             opacity: hasTorch ? 1 : 0.4,
           }}
@@ -244,9 +286,10 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan Visit
         </div>
         <div style={{
           width: 56, height: 56, borderRadius: 16,
-          background: 'rgba(255,255,255,0.14)',
+          background: 'rgba(59,130,246,0.14)',
+          border: '1px solid rgba(59,130,246,0.30)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'rgba(255,255,255,0.75)',
+          color: '#BFDBFE',
         }}>
           <Camera size={22} />
         </div>

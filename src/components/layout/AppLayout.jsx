@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase, PhoneCall } from 'lucide-react';
-import Sidebar from './Sidebar';
-import { Toaster } from 'react-hot-toast';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase, PhoneCall, Siren, Bell } from 'lucide-react';
+import Sidebar, { NAV, GuardMark } from './Sidebar';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { alertAPI } from '../../api';
@@ -37,131 +36,77 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
   const typeMeta = TYPE_META[alert.type] || TYPE_META.other;
   const sev = alert.severity || (isBroadcast ? 'high' : 'critical');
   const name = alert.residentId?.name || 'Unknown';
-  const unit = alert.unitId
-    ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
-    : null;
-
-  const barColor = isBroadcast ? '#7C3AED' : typeMeta.barColor;
+  const unit = alert.unitId ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}` : null;
+  const accent = isBroadcast ? '#7C3AED' : typeMeta.barColor;
+  const phone = alert.residentId?.phone || alert.contactNumber;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-5 pointer-events-none">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
-
-      <div className="relative pointer-events-auto w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
-        style={{ border: `2px solid ${barColor}30` }}>
-
-        {/* Top colour bar */}
-        <div style={{ height: 5, background: barColor, width: '100%' }} />
-
-        <div className="p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              {/* Source role badge */}
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: roleCfg.bg, border: `1.5px solid ${roleCfg.border}` }}>
-                {isBroadcast
-                  ? <Radio size={20} style={{ color: '#7C3AED' }} />
-                  : <RoleIcon size={20} style={{ color: roleCfg.color }} />}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Role chip */}
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                    style={{ background: isBroadcast ? '#F5F3FF' : roleCfg.bg, color: isBroadcast ? '#7C3AED' : roleCfg.color, border: `1px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}` }}>
-                    {isBroadcast ? 'Estate Broadcast' : roleCfg.label}
-                  </span>
-                  {/* Severity */}
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full border"
-                    style={{ background: sev === 'critical' ? '#FEF2F2' : sev === 'high' ? '#FFF7ED' : '#FEFCE8', color: sev === 'critical' ? '#B91C1C' : sev === 'high' ? '#C2410C' : '#92400E', borderColor: sev === 'critical' ? '#FECACA' : sev === 'high' ? '#FED7AA' : '#FDE68A' }}>
-                    {sev}
-                  </span>
-                  {queueCount > 1 && (
-                    <span className="text-xs font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">
-                      +{queueCount - 1} more
-                    </span>
-                  )}
-                </div>
-                <p className="text-slate-900 font-bold text-base mt-0.5 leading-tight">
-                  {alert.title || (isBroadcast ? 'Estate Emergency Broadcast' : `${typeMeta.label}`)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button onClick={onToggleMute}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
-                title={muted ? 'Unmute' : 'Mute siren'}>
-                {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-              </button>
-              <button onClick={onClose} aria-label="Close without acknowledging"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
-                <X size={16} />
-              </button>
+    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:px-4">
+      <div className="absolute inset-0 bg-[#07111F]/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-md bg-white sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl animate-slide-down" style={{ maxHeight: '94vh' }}>
+        {/* Alarm header */}
+        <div className="relative px-5 pt-5 pb-6 text-white overflow-hidden" style={{ background: `radial-gradient(120% 140% at 100% 0%, ${accent} 0%, #450A0A 70%)` }}>
+          <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,.25) 0 2px, transparent 2px 14px)' }} />
+          <div className="relative flex items-center justify-between">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] px-2.5 py-1 rounded-full bg-white/15 border border-white/25">
+              <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-white" style={{ animation: 'gPing 1s ease-out infinite' }} /><span className="relative w-2 h-2 rounded-full bg-white" /></span>
+              {isBroadcast ? 'Estate broadcast' : 'Emergency alert'}
+            </span>
+            <div className="flex items-center gap-1">
+              {queueCount > 1 && <span className="text-[11px] font-bold bg-white text-red-600 px-2 py-0.5 rounded-full mr-1">+{queueCount - 1} more</span>}
+              <button onClick={onToggleMute} title={muted ? 'Unmute' : 'Mute siren'} className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20">{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button>
+              <button onClick={onClose} aria-label="Close without acknowledging" className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20"><X size={17} /></button>
             </div>
           </div>
-
-          {/* Raised by info */}
-          <div className="flex items-center gap-3 mb-3 p-3 rounded-xl"
-            style={{ background: isBroadcast ? '#F5F3FF' : roleCfg.bg, border: `1px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}` }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-              style={{ background: '#fff', border: `1.5px solid ${isBroadcast ? '#DDD6FE' : roleCfg.border}`, color: isBroadcast ? '#7C3AED' : roleCfg.color }}>
-              {name[0]?.toUpperCase() || '?'}
+          <div className="relative mt-5 flex items-center gap-4">
+            <span className="w-16 h-16 rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center g-alarm flex-shrink-0">
+              {isBroadcast ? <Radio size={30} /> : <AlertTriangle size={30} />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-white/70">{typeMeta.label} · {sev}</p>
+              <h2 className="text-[22px] font-bold leading-tight" style={{ color: '#fff' }}>{alert.title || (isBroadcast ? 'Estate emergency broadcast' : typeMeta.label)}</h2>
             </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '58vh' }}>
+          {/* Who */}
+          <div className="flex items-center gap-3 p-3 rounded-2xl border" style={{ background: roleCfg.bg, borderColor: roleCfg.border }}>
+            <span className="w-11 h-11 rounded-full bg-white flex items-center justify-center font-bold text-[16px] flex-shrink-0 border" style={{ color: roleCfg.color, borderColor: roleCfg.border }}>
+              {isBroadcast ? <Radio size={18} /> : <RoleIcon size={18} />}
+            </span>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm" style={{ color: '#0F172A' }}>
-                {isBroadcast ? `Broadcast by ${roleCfg.label}` : `Raised by ${roleCfg.label}`}: <span style={{ color: isBroadcast ? '#7C3AED' : roleCfg.color }}>{name}</span>
-              </p>
-              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                {unit && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: '#64748B' }}>
-                    <Home size={10} />{unit}
-                  </span>
-                )}
-                {alert.residentId?.phone && (
-                  <a href={`tel:${alert.residentId.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#3B82F6' }}>
-                    <Phone size={10} />{alert.residentId.phone}
-                  </a>
-                )}
-                {alert.residentId?._id && <CallButton person={alert.residentId} />}
-              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: roleCfg.color }}>{isBroadcast ? `Broadcast by ${roleCfg.label}` : `Raised by ${roleCfg.label}`}</p>
+              <p className="text-[16px] font-bold text-slate-900 truncate">{name}</p>
+              {unit && <p className="text-[12.5px] text-slate-600 flex items-center gap-1"><Home size={12} />{unit}</p>}
             </div>
           </div>
 
-          {/* Message */}
-          {alert.note && (
-            <p className="text-slate-600 text-sm leading-relaxed mb-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-              {alert.note}
-            </p>
+          {alert.note && <p className="text-[14px] text-slate-700 leading-relaxed bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100">“{alert.note}”</p>}
+
+          {(alert.location || alert.actionRequired) && (
+            <div className="grid gap-2">
+              {alert.location && <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[13.5px] text-slate-700"><MapPin size={15} className="text-red-500 flex-shrink-0" /><span className="font-medium">{alert.location}</span></div>}
+              {alert.actionRequired && <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-100 text-[13.5px] text-amber-800"><Shield size={15} className="text-amber-500 flex-shrink-0 mt-0.5" /><span className="font-semibold">{alert.actionRequired}</span></div>}
+            </div>
           )}
 
-          {/* Location / action */}
-          <div className="space-y-1.5 mb-4">
-            {alert.location && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <MapPin size={12} className="text-slate-400 flex-shrink-0" />{alert.location}
-              </div>
-            )}
-            {alert.actionRequired && (
-              <div className="flex items-start gap-2 text-sm">
-                <Shield size={12} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                <span className="text-amber-700 font-medium">{alert.actionRequired}</span>
-              </div>
-            )}
-            {alert.contactNumber && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Phone size={12} className="text-slate-400 flex-shrink-0" />{alert.contactNumber}
-              </div>
-            )}
-          </div>
+          {/* Contact */}
+          {(phone || alert.residentId?._id) && (
+            <div className="grid grid-cols-2 gap-2">
+              {phone && <a href={`tel:${phone}`} className="h-12 rounded-xl border border-slate-200 flex items-center justify-center gap-2 text-[14px] font-semibold text-slate-800 hover:bg-slate-50" style={{ textDecoration: 'none' }}><Phone size={16} className="text-blue-600" /> Call phone</a>}
+              {alert.residentId?._id && <div className="h-12 rounded-xl border border-slate-200 flex items-center justify-center"><CallButton person={alert.residentId} /></div>}
+            </div>
+          )}
 
-          <button onClick={onDismiss}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all border"
-            style={{ background: `${barColor}10`, color: barColor, borderColor: `${barColor}40` }}>
+          <button onClick={onDismiss} className="w-full h-14 rounded-2xl text-[16px] font-bold text-white flex items-center justify-center gap-2 active:scale-[.99] transition-transform"
+            style={{ background: isBroadcast ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : 'linear-gradient(135deg,#EF4444,#B91C1C)', boxShadow: '0 12px 28px -10px rgba(220,38,38,.6)' }}>
+            <Shield size={18} />
             {alert.isEmergencyBroadcast
-              ? (queueCount > 1 ? `Got it — next (${queueCount - 1} remaining)` : 'Got it')
-              : (queueCount > 1 ? `Acknowledge & see next (${queueCount - 1} remaining)` : "Acknowledge — I'm on it")}
+              ? (queueCount > 1 ? `Got it — next (${queueCount - 1} left)` : 'Got it')
+              : (queueCount > 1 ? `I'm on it — next (${queueCount - 1} left)` : "Acknowledge — I'm on it")}
           </button>
+          {!isBroadcast && <p className="text-center text-[11.5px] text-slate-400">The person who raised it is told help is on the way.</p>}
         </div>
       </div>
     </div>
@@ -220,120 +165,136 @@ export default function AppLayout({ children }) {
     return unsub;
   }, [subscribe, myId]);
 
+  // Live count of alerts still active in the estate (open + being handled)
+  const [liveCount, setLiveCount] = useState(0);
+  const countTimer = useRef(null);
+  const refreshCount = useCallback(() => {
+    alertAPI.getAll({ status: 'active', page: 1, limit: 1 })
+      .then(({ data }) => setLiveCount(data.pagination?.total ?? (data.data || []).length))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refreshCount();
+    const t = setInterval(refreshCount, 60000);
+    const unsub = subscribe ? subscribe('new_alert', () => { clearTimeout(countTimer.current); countTimer.current = setTimeout(refreshCount, 600); }) : null;
+    return () => { clearInterval(t); clearTimeout(countTimer.current); unsub && unsub(); };
+  }, [subscribe, refreshCount]);
+  const alertBadge = Math.max(liveCount, queue.length);
+
   const current = queue[0] || null;
+  const { connected } = useSocket() || {};
+  const { pathname } = useLocation();
+  const page = NAV.find((n) => (n.to === '/verify' ? pathname === '/verify' || pathname === '/' : pathname.startsWith(n.to))) || NAV[0];
+  const [clock, setClock] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setClock(new Date()), 30000); return () => clearInterval(t); }, []);
+  const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'Your estate';
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
+    <div className="flex h-screen bg-[#F4F6F8] overflow-hidden">
       {current && (
-        <AlertPopup
-          alert={current}
-          queueCount={queue.length}
-          onDismiss={() => handleDismiss(true)}
-          onClose={() => handleDismiss(false)}
-          muted={muted}
-          onToggleMute={handleToggleMute}
-        />
+        <AlertPopup alert={current} queueCount={queue.length} onDismiss={() => handleDismiss(true)} onClose={() => handleDismiss(false)} muted={muted} onToggleMute={handleToggleMute} />
       )}
 
       {sidebarOpen && (
         <div className="fixed inset-0 z-[100] lg:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="overlay-backdrop" aria-hidden="true" />
-          <div className="absolute left-0 top-0 bottom-0 z-50 animate-slide-in">
-            <Sidebar mobile onClose={() => setSidebarOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 z-50 animate-slide-in-right" onClick={(e) => e.stopPropagation()}>
+            <Sidebar mobile onClose={() => setSidebarOpen(false)} alertCount={alertBadge} />
           </div>
         </div>
       )}
 
-      <div className="hidden lg:flex flex-shrink-0">
-        <Sidebar />
-      </div>
+      <div className="hidden lg:flex flex-shrink-0"><Sidebar alertCount={alertBadge} /></div>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile topbar */}
-        <header className="lg:hidden flex items-center gap-3 px-4 h-14 flex-shrink-0"
-          style={{ background: '#060E1A', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: 4, display: 'flex', flexShrink: 0 }}
-          >
-            <Menu size={22} />
-          </button>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 0 10px rgba(59,130,246,0.4)' }}>
-            <Shield size={14} className="text-white" />
+        {/* Mobile top bar */}
+        <header className="lg:hidden flex-shrink-0 bg-[#07111F] text-white border-b border-white/[0.06]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          <div className="flex items-center gap-3 px-4 h-[58px]">
+            <NavLink to="/verify" aria-label="Home" className="flex items-center gap-3 min-w-0 flex-1 active:opacity-80" style={{ textDecoration: 'none' }}>
+              <GuardMark size={34} />
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="text-[14px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span className="text-blue-400">Connect</span> <span className="text-white/40 font-medium">Guard</span></p>
+                <p className="text-[11px] text-white/50 flex items-center gap-1.5 truncate">
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${connected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  {estateName}
+                </p>
+              </div>
+            </NavLink>
+            <button onClick={() => navigate('/alerts')} aria-label={`Alerts${alertBadge ? ` (${alertBadge})` : ''}`}
+              className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 ${queue.length ? 'bg-red-500 g-alarm' : 'bg-white/[0.07]'}`}>
+              <Bell size={18} />
+              {alertBadge > 0 && <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10.5px] font-bold flex items-center justify-center border-2 border-[#07111F] ${queue.length ? 'bg-white text-red-600' : 'bg-red-500 text-white'}`}>{alertBadge > 99 ? '99+' : alertBadge}</span>}
+            </button>
+            <button onClick={() => setSidebarOpen(true)} aria-label="Menu" className="w-10 h-10 rounded-full flex items-center justify-center bg-white/[0.07] active:scale-95 transition-transform">
+              <Menu size={19} />
+            </button>
           </div>
-          <span className="font-bold flex-1 text-sm" style={{ letterSpacing: '-0.02em' }}>
-            <span style={{ color: '#FFFFFF' }}>Area</span>
-            <span style={{ color: '#3B82F6' }}>Connect</span>
-            {' '}
-            <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>Guard</span>
-          </span>
           {queue.length > 0 && (
-            <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse"
-              style={{ color: '#FCA5A5', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}>
-              <AlertTriangle size={11} /> {queue.length} ALERT{queue.length > 1 ? 'S' : ''}
-            </span>
+            <button onClick={() => navigate('/alerts')} className="w-full flex items-center justify-center gap-2 h-9 text-[12.5px] font-bold bg-red-500 text-white">
+              <AlertTriangle size={14} /> {queue.length} active alert{queue.length > 1 ? 's' : ''} — tap to respond
+            </button>
           )}
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8">
+        {/* Desktop top bar */}
+        <header className="hidden lg:flex flex-shrink-0 h-16 items-center gap-3 px-7 bg-white border-b border-slate-200/80">
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[11px] text-slate-400">{estateName}</p>
+            <p className="text-[16px] font-semibold text-slate-900 truncate">{page.label}</p>
+          </div>
+          <button onClick={() => navigate('/alerts')} aria-label="Alerts"
+            className={`relative w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${queue.length ? 'bg-red-500 border-red-500 text-white g-alarm' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+            <Bell size={18} />
+            {alertBadge > 0 && <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10.5px] font-bold flex items-center justify-center border-2 border-white ${queue.length ? 'bg-white text-red-600' : 'bg-red-500 text-white'}`}>{alertBadge > 99 ? '99+' : alertBadge}</span>}
+          </button>
+          <div className="flex items-center gap-4 text-[12.5px] text-slate-500">
+            <span className="inline-flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-amber-400'}`} />{connected ? 'Connected' : 'Reconnecting…'}</span>
+            <span className="tabular-nums font-semibold text-slate-800">{clock.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          {pathname !== '/verify' && (
+            <NavLink to="/verify" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[13.5px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', textDecoration: 'none' }}>
+              <QrCode size={16} /> Verify visitor
+            </NavLink>
+          )}
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-4 pb-28 md:p-6 lg:p-8 lg:pb-8">
           <CallAlertsPrompt appName="AC Guards" />
           {children}
         </main>
-        {/* Residents sharing live location for their safety */}
         <LiveLocations />
       </div>
 
-      {/* ── Mobile bottom navigation ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30"
-        style={{ background: '#060E1A', borderTop: '1px solid rgba(255,255,255,0.06)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex">
-          {[
-            { to: '/verify', icon: QrCode,        label: 'Scan' },
-            { to: '/log',    icon: ClipboardList,  label: 'Log' },
-            { to: '/alerts', icon: Shield,         label: 'Alerts' },
-            { to: '/calls',  icon: PhoneCall,      label: 'Calls' },
-          ].map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/verify'}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all"
-              style={({ isActive }) => ({ color: isActive ? '#3B82F6' : 'rgba(255,255,255,0.3)' })}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
-                  <span className="text-[10px] font-semibold">{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
-          <button
-            onClick={async () => { await logout(); navigate('/login'); }}
-            className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)' }}
-          >
-            <LogOut size={22} strokeWidth={1.8} />
-            <span className="text-[10px] font-semibold">Sign Out</span>
-          </button>
+      {/* ── Mobile bottom navigation with a raised Scan button ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#07111F] border-t border-white/[0.06]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="grid grid-cols-5 items-end h-16">
+          {[NAV[1], NAV[2], NAV[0], NAV[3], NAV[4]].map(({ to, icon: Icon, label }) => {
+            const center = to === '/verify';
+            return (
+              <NavLink key={to} to={to} end={center} className="relative flex flex-col items-center justify-center h-full gap-0.5" style={{ textDecoration: 'none' }}>
+                {({ isActive }) => center ? (
+                  <>
+                    <span className={`-mt-7 w-[58px] h-[58px] rounded-2xl flex items-center justify-center text-white border-4 border-[#07111F] ${isActive ? '' : 'opacity-95'}`}
+                      style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', boxShadow: '0 10px 24px -8px rgba(59,130,246,.8)' }}>
+                      <QrCode size={26} />
+                    </span>
+                    <span className={`text-[10.5px] font-semibold ${isActive ? 'text-blue-400' : 'text-white/50'}`}>Scan</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="relative">
+                      <Icon size={22} className={isActive ? 'text-blue-400' : 'text-white/40'} strokeWidth={isActive ? 2.2 : 1.8} />
+                      {to === '/alerts' && alertBadge > 0 && <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9.5px] font-bold flex items-center justify-center border-2 border-[#07111F]">{alertBadge > 99 ? '99+' : alertBadge}</span>}
+                    </span>
+                    <span className={`text-[10.5px] font-semibold ${isActive ? 'text-blue-400' : 'text-white/45'}`}>{label}</span>
+                    {isActive && <span className="absolute top-0 w-8 h-[3px] rounded-b bg-blue-400" />}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#FFFFFF',
-            color: '#0F172A',
-            border: '1px solid rgba(15,23,42,0.10)',
-            borderRadius: '10px',
-            fontSize: '0.875rem',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.10)',
-          },
-          success: { iconTheme: { primary: '#3B82F6', secondary: '#EFF6FF' } },
-        }}
-      />
     </div>
   );
 }
