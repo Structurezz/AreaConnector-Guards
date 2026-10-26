@@ -90,7 +90,7 @@ export default function CallOverlay() {
             {free ? <><ShieldCheck size={12} /> {kind === 'emergency' ? 'Emergency · free' : 'Free call'}</> : 'Call'}
           </span>
           <PersonAvatar person={peer} ring={status === 'incoming' || status === 'ringing'} />
-          <h2 className="text-2xl font-bold mt-6">{peer.name || 'Neighbour'}</h2>
+          <h2 className="text-2xl font-bold mt-6" style={{ color: '#fff' }}>{peer.name || 'Neighbour'}</h2>
           <p className="text-sm text-indigo-200 mt-1">{[ROLE_LABEL[peer.role] && peer.role !== 'resident' ? ROLE_LABEL[peer.role] : null, peer.unit].filter(Boolean).join(' · ')}</p>
           <p className={`mt-5 text-lg font-medium ${status === 'active' ? 'tabular-nums' : ''}`}>{subtitle}</p>
           {status === 'active' && call.path && (
