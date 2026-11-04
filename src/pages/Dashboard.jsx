@@ -54,6 +54,15 @@ function timeWindow(v) {
   };
 }
 
+// Unused passes stop being valid when their window closes (server/utils/passExpiry).
+// Mirrors the server so stale lists and the offline cache never show them as valid.
+const passEnd = (v) => {
+  const s = safeDate(v?.expectedDate);
+  return s ? new Date(s.getTime() + (Number(v.expectedDuration) || 720) * 60000) : null;
+};
+const isPastExpiry = (v) => ['active', 'pending'].includes(v?.status) && !!passEnd(v) && new Date() > passEnd(v);
+const effective = (v) => (v && isPastExpiry(v) ? { ...v, status: 'expired' } : v);
+
 // ── Status pill ──
 const PILL = {
   active:        { label: 'Expected',    bg: '#FEF3C7', fg: '#B45309' },
@@ -169,7 +178,9 @@ function InfoCell({ icon: Icon, label, value, sub, accent }) {
   );
 }
 
-function VisitorResultCard({ visitor, code, onCheckIn, onCheckOut, onReset }) {
+function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset }) {
+  const visitor = effective(raw);
+  const isExpired     = visitor.status === 'expired';
   const isActive      = visitor.status === 'active';
   const isIn          = visitor.status === 'checked-in';
   const isDone        = visitor.status === 'checked-out';
@@ -180,7 +191,12 @@ function VisitorResultCard({ visitor, code, onCheckIn, onCheckOut, onReset }) {
   if (isIn)          { tone = 'inside';  title = 'ON SITE';         sub = `Checked in at ${fmt(visitor.entryTime, 'HH:mm')} — check out on exit`; }
   if (isDone)        { tone = 'done';    title = 'PASS USED';       sub = 'This visitor has already checked out'; }
   if (isBlacklisted) { tone = 'denied';  title = 'ACCESS DENIED';   sub = 'This visitor is blacklisted'; }
-  if (['expired', 'cancelled'].includes(visitor.status)) { tone = 'denied'; title = 'ACCESS DENIED'; sub = `Pass ${visitor.status}`; }
+  if (visitor.status === 'cancelled') { tone = 'denied'; title = 'ACCESS DENIED'; sub = 'Pass cancelled by the host'; }
+  if (isExpired) {
+    const end = passEnd(visitor);
+    tone = 'denied'; title = 'PASS EXPIRED';
+    sub = end ? `Expired ${isToday(end) ? `today at ${format(end, 'HH:mm')}` : format(end, 'EEE d MMM, HH:mm')} — do not admit` : 'This pass is no longer valid — do not admit';
+  }
 
   const win = timeWindow(visitor);
 
@@ -225,6 +241,13 @@ function VisitorResultCard({ visitor, code, onCheckIn, onCheckOut, onReset }) {
 
         {/* Actions */}
         <div className="space-y-2.5">
+          {isExpired && (
+            <div className="flex items-start gap-3 p-3.5 rounded-2xl text-[13.5px] font-semibold"
+              style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
+              <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
+              <span>Expired pass — do not admit. Ask the visitor to contact {visitor.hostResidentId?.name || 'their host'} for a new pass.</span>
+            </div>
+          )}
           {isBlacklisted && (
             <div className="flex items-center gap-3 p-3.5 rounded-2xl text-[13.5px] font-semibold"
               style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
@@ -342,12 +365,16 @@ export default function SecurityDashboard() {
     return { ins, outs, total: sessionLog.length };
   }, [sessionLog]);
 
+  // Re-check expiry every minute so passes flip to Expired as their window closes
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 60000); return () => clearInterval(t); }, []);
+
   // Today's gate activity, derived from the loaded visitor list
   const today = useMemo(() => {
     const expected = [], inside = [], out = [];
     for (const v of visitors) {
       const exp = safeDate(v.expectedDate);
-      if ((v.status === 'active' || v.status === 'pending') && exp && isToday(exp)) expected.push(v);
+      if ((v.status === 'active' || v.status === 'pending') && exp && isToday(exp) && !isPastExpiry(v)) expected.push(v);
       else if (v.status === 'checked-in') inside.push(v);
       else if (v.status === 'checked-out' && safeDate(v.exitTime) && isToday(safeDate(v.exitTime))) out.push(v);
     }
@@ -356,7 +383,7 @@ export default function SecurityDashboard() {
     inside.sort(by('entryTime', -1));
     out.sort(by('exitTime', -1));
     return { expected, inside, out };
-  }, [visitors]);
+  }, [visitors, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patchVisitor = (id, changes) => {
     if (!id) return;
@@ -373,7 +400,10 @@ export default function SecurityDashboard() {
     try {
       const { data } = await visitorAPI.verify(trimmed);
       setVisitor(data.data);
-      if (data.state === 'early_arrival') {
+      if (isPastExpiry(data.data)) {
+        setState('expired'); playSound('expired');
+        patchVisitor(data.data?._id, { status: 'expired' });
+      } else if (data.state === 'early_arrival') {
         setState('early_arrival');
         toast(`Visitor is ${data.minsEarly} min early — the host has been pinged.`, { icon: '⏳', duration: 5000 });
         playSound('click');
@@ -384,6 +414,16 @@ export default function SecurityDashboard() {
     } catch (err) {
       const status = err.response?.status;
       if (status === 404) { playSound('error'); setState('not_found'); return; }
+      // Expired pass: show who it was for, sound the expired alarm
+      if (err.response?.data?.code === 'PASS_EXPIRED') {
+        const v = err.response.data.data;
+        setVisitor(v ? { ...v, status: 'expired' } : null);
+        setState('expired'); playSound('expired');
+        if (v?._id) patchVisitor(v._id, { status: 'expired' });
+        return;
+      }
+      if (status === 410 && err.response?.data?.data) { playSound('error'); setVisitor(err.response.data.data); setState('found'); return; }
+      if (status === 423 || err.response?.data?.code === 'PASS_AWAITING_APPROVAL') { playSound('error'); setVisitor(err.response?.data?.data); setState('awaiting_approval'); return; }
       if (status === 403) { playSound('error'); setVisitor(err.response?.data?.data); setState('blacklisted'); return; }
 
       // No status = network error. Fall back to the offline cache so the
@@ -392,7 +432,8 @@ export default function SecurityDashboard() {
         const cached = findCachedVisitorByCode(estateId, trimmed);
         if (cached) {
           setVisitor(cached);
-          setState('found');
+          if (isPastExpiry(cached) || cached.status === 'expired') { setState('expired'); playSound('expired'); return; }
+          setState(cached.status === 'pending' && cached.awaitingApproval ? 'awaiting_approval' : 'found');
           playSound('click');
           toast('Offline — matched from cached visitor list', { icon: '📶', duration: 4000 });
           return;
@@ -474,6 +515,11 @@ export default function SecurityDashboard() {
       setSessionLog((prev) => [{ name: visitor.visitorName, action: 'Check In', time: new Date() }, ...prev.slice(0, 9)]);
     } catch (err) {
       if (!err.response) { queueOffline('checkIn', 'checked in'); return; }
+      if (err.response?.data?.code === 'PASS_EXPIRED') {
+        playSound('expired'); setState('expired');
+        setVisitor((v) => ({ ...v, status: 'expired' })); patchVisitor(visitor._id, { status: 'expired' });
+        return;
+      }
       playSound('error'); toast.error(err.response?.data?.message || 'Failed');
     }
   };
@@ -496,9 +542,9 @@ export default function SecurityDashboard() {
   const reset = () => { setCode(''); setVisitor(null); setState(null); };
 
   const inputBorder =
-    state === 'not_found' || state === 'blacklisted' ? '#F87171'
+    state === 'not_found' || state === 'blacklisted' || state === 'expired' ? '#F87171'
       : state === 'found' ? '#34D399'
-      : state === 'early_arrival' ? '#FBBF24'
+      : state === 'early_arrival' || state === 'awaiting_approval' ? '#FBBF24'
       : '#E2E8F0';
 
   const LISTS = [
@@ -693,6 +739,33 @@ export default function SecurityDashboard() {
             </div>
           )}
 
+          {/* ── AWAITING ESTATE APPROVAL — guards are deliberately not told why ── */}
+          {state === 'awaiting_approval' && (
+            <div className="g-card overflow-hidden g-rise" style={{ borderColor: TONES.hold.border }}>
+              <Verdict tone="hold" title="HOLD — NOT YET APPROVED" sub="Pass is awaiting estate management approval" code={visitor?.visitorCode || code} />
+              <div className="p-4 sm:p-5 space-y-3">
+                {visitor && (
+                  <div className="flex items-center gap-4">
+                    <Avatar visitor={visitor} size={64} ring={TONES.hold.ring} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[17px] font-semibold truncate" style={{ color: '#0F172A' }}>{visitor.visitorName}</div>
+                      <div className="text-[13px] truncate" style={{ color: '#475569' }}>{visitor.purpose}{visitor.hostResidentId?.name ? ` · for ${visitor.hostResidentId.name}` : ''}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="p-3.5 rounded-xl text-[13.5px] font-medium" style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E' }}>
+                  Please ask the visitor to wait and contact the estate office. Entry is allowed once management approves the pass.
+                  Medical and emergency visitors should always be let in.
+                </div>
+                <button onClick={reset}
+                  className="w-full h-12 rounded-2xl text-[14px] font-semibold hover:bg-slate-50"
+                  style={{ background: '#fff', color: '#0F172A', border: '1px solid #E2E8F0' }}>
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ── EARLY ARRIVAL — waiting for host ── */}
           {state === 'early_arrival' && visitor && (
             <div className="g-card overflow-hidden g-rise" style={{ borderColor: TONES.hold.border }}>
@@ -745,9 +818,18 @@ export default function SecurityDashboard() {
           )}
 
           {/* ── FOUND ── */}
-          {state === 'found' && visitor && (
-            <VisitorResultCard visitor={visitor} code={code}
+          {(state === 'found' || state === 'expired') && visitor && (
+            <VisitorResultCard visitor={state === 'expired' ? { ...visitor, status: 'expired' } : visitor} code={code}
               onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} onReset={reset} />
+          )}
+          {state === 'expired' && !visitor && (
+            <div className="g-card overflow-hidden g-rise" style={{ borderColor: '#FCA5A5' }}>
+              <Verdict tone="denied" title="PASS EXPIRED" sub="This pass is no longer valid — do not admit" code={code} alarm />
+              <div className="p-4 sm:p-5">
+                <button onClick={reset} className="w-full h-12 rounded-2xl text-[14px] font-semibold hover:bg-slate-50"
+                  style={{ background: '#fff', color: '#0F172A', border: '1px solid #E2E8F0' }}>Verify another visitor</button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -825,7 +907,7 @@ export default function SecurityDashboard() {
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <span className="text-[12px] font-semibold tabular-nums" style={{ color: '#475569' }}>{fmt(t, 'HH:mm')}</span>
-                        <StatusPill status={v.status} />
+                        <StatusPill status={effective(v).status} />
                       </div>
                       <ChevronRight size={16} className="flex-shrink-0 hidden sm:block" style={{ color: '#CBD5E1' }} />
                     </button>

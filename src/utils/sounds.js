@@ -39,6 +39,12 @@ const SOUNDS = {
   click:   (c) => tone(c, 1000, 0.05, 'sine',     0.15),
   success: (c) => { tone(c, 440, 0.12, 'sine', 0.18); tone(c, 660, 0.15, 'sine', 0.18, 0.13); },
   error:   (c) => tone(c, 260, 0.35, 'sawtooth',  0.15),
+  // Expired pass: loud, unmistakable triple buzz (falling pitch)
+  expired: (c) => {
+    tone(c, 520, 0.22, 'square', 0.22);
+    tone(c, 390, 0.22, 'square', 0.22, 0.26);
+    tone(c, 260, 0.45, 'sawtooth', 0.24, 0.52);
+  },
   checkin: (c) => { tone(c, 440, 0.10, 'sine', 0.18); tone(c, 550, 0.10, 'sine', 0.18, 0.11); tone(c, 660, 0.15, 'sine', 0.18, 0.22); },
 };
 
@@ -47,6 +53,9 @@ export function playSound(type) {
     const fn = SOUNDS[type];
     if (fn) fn(getCtx());
   } catch {}
+  // Buzz the phone too for refusals, so the guard feels it at a noisy gate
+  if (type === 'expired') try { navigator.vibrate?.([220, 80, 220, 80, 400]); } catch {}
+  else if (type === 'error') try { navigator.vibrate?.(250); } catch {}
 }
 
 // Emergency siren lives in ./siren (looping, local file, offline-safe,
