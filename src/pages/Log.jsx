@@ -10,6 +10,8 @@ import Pagination from '../components/ui/Pagination';
 import { useOnline } from '../offline/useOnline';
 import { useAuth } from '../context/AuthContext';
 import { readVisitorsCache, saveVisitorsCache, enqueueMutation } from '../offline/cache';
+import { useSite } from '../context/SiteContext';
+import { CategoryChip } from '../components/ui/CategoryChip';
 
 const PAGE_SIZE = 20;
 // Guards only see visitors once they reach the gate — never who is expected
@@ -50,6 +52,7 @@ const safeFormat = (value, fmt) => {
 };
 
 export default function SecurityLog() {
+  const { terms, categoryLabel } = useSite();
   const { user } = useAuth();
   const estateId = user?.estateId?._id || user?.estateId;
   const online = useOnline();
@@ -117,7 +120,13 @@ export default function SecurityLog() {
         ));
         return;
       }
-      playSound('error'); toast.error(err.response?.data?.message || 'Failed');
+      playSound('error');
+      // Induction / visiting-hours checks need the full Gate screen
+      if ([428, 409].includes(err.response?.status) && (err.response.data?.code === 'INDUCTION_REQUIRED' || err.response.data?.overridable)) {
+        toast.error(`${err.response.data.message || 'Entry needs a check'} — verify ${v.visitorCode || 'the code'} on the Gate screen.`, { duration: 6000 });
+        return;
+      }
+      toast.error(err.response?.data?.message || 'Failed');
     }
   };
 
@@ -134,6 +143,8 @@ export default function SecurityLog() {
         v.purpose,
         v.hostResidentId?.name,
         v.hostUnitId?.unitNumber,
+        v.category && v.category !== 'guest' ? categoryLabel(v.category) : null,
+        v.details?.company, v.details?.studentName, v.details?.patientName, v.details?.vehiclePlate,
       ].filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     });
@@ -206,7 +217,7 @@ export default function SecurityLog() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search visitor, code, host or unit…"
+              placeholder={`Search visitor, code, host or ${terms.unit.toLowerCase()}…`}
               className="w-full h-12 pl-10 pr-10 rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-blue-500/30"
               style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A' }}
             />
@@ -254,7 +265,7 @@ export default function SecurityLog() {
             <Search size={20} style={{ color: '#94A3B8' }} />
           </div>
           <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>No visitors match</p>
-          <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>Try a different name, code or unit.</p>
+          <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>Try a different name, code or {terms.unit.toLowerCase()}.</p>
           <button onClick={() => { setSearch(''); setFilter('all'); }}
             className="text-xs font-semibold mt-3 h-10 px-4 rounded-xl" style={{ color: '#1D4ED8', background: 'rgba(59,130,246,0.08)' }}>
             Clear filters
@@ -282,7 +293,7 @@ export default function SecurityLog() {
               <table className="w-full">
                 <thead>
                   <tr style={{ background: '#F8FAFC', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-                    {['', 'Visitor', 'Host', 'Unit', 'Expected', 'In', 'Out', 'Status', ''].map((h, i) => (
+                    {['', 'Visitor', 'Host', terms.unit, 'Expected', 'In', 'Out', 'Status', ''].map((h, i) => (
                       <th key={i} className="text-left g-label px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -310,7 +321,7 @@ export default function SecurityLog() {
                             <DirectionChip status={v.status} size={34} />
                           </td>
                           <td className="px-4 py-3">
-                            <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>{v.visitorName}</div>
+                            <div className="font-semibold text-sm flex items-center gap-1.5" style={{ color: '#0F172A' }}>{v.visitorName} <CategoryChip category={v.category} label={categoryLabel(v.category)} /></div>
                             <div className="font-mono text-[11px] mt-0.5" style={{ color: '#1D4ED8' }}>{v.visitorCode}</div>
                           </td>
                           <td className="px-4 py-3 text-[13px]" style={{ color: '#475569' }}>
@@ -427,6 +438,7 @@ function ActionButton({ v, onAction, compact = false }) {
 }
 
 function TimelineItem({ v, onAction }) {
+  const { terms, categoryLabel } = useSite();
   const canAct = ['active', 'checked-in'].includes(v.status);
   const entry = safeFormat(v.entryTime, 'HH:mm');
   const exit = safeFormat(v.exitTime, 'HH:mm');
@@ -444,10 +456,11 @@ function TimelineItem({ v, onAction }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-[14px] truncate" style={{ color: '#0F172A' }}>{v.visitorName}</span>
               <StatusPill status={v.status} />
+              <CategoryChip category={v.category} label={categoryLabel(v.category)} />
             </div>
             <div className="text-[12px] mt-0.5 truncate" style={{ color: '#475569' }}>
               {v.hostResidentId?.name ? <>Visiting <span className="font-semibold" style={{ color: '#0F172A' }}>{v.hostResidentId.name}</span></> : 'No host'}
-              {v.hostUnitId?.unitNumber ? <> · Unit {v.hostUnitId.unitNumber}</> : null}
+              {v.hostUnitId?.unitNumber ? <> · {terms.unit} {v.hostUnitId.unitNumber}</> : null}
             </div>
           </div>
           {main && (

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Shield, AlertTriangle, Megaphone, Radio, MapPin, Phone, Home, Volume2, VolumeX, QrCode, ClipboardList, LogOut, UserRound, Briefcase, PhoneCall, Siren, Bell } from 'lucide-react';
-import Sidebar, { NAV, GuardMark } from './Sidebar';
+import Sidebar, { NAV, GuardMark, useNav } from './Sidebar';
+import { useSite } from '../../context/SiteContext';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { alertAPI } from '../../api';
@@ -31,12 +32,16 @@ const TYPE_META = {
 function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute }) {
   const isBroadcast = alert.isEmergencyBroadcast;
   const role = alert.raisedByRole || alert.residentId?.role || 'resident';
-  const roleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  const { terms, isEstate } = useSite();
+  const baseCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  // Site wording (estates keep "Resident" / "Estate Manager")
+  const roleCfg = isEstate || role === 'security' ? baseCfg
+    : { ...baseCfg, label: role === 'resident' || !ROLE_CFG[role] ? terms.member : terms.manager };
   const RoleIcon = roleCfg.Icon;
   const typeMeta = TYPE_META[alert.type] || TYPE_META.other;
   const sev = alert.severity || (isBroadcast ? 'high' : 'critical');
   const name = alert.residentId?.name || 'Unknown';
-  const unit = alert.unitId ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}` : null;
+  const unit = alert.unitId ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}${terms.unit} ${alert.unitId.unitNumber}` : null;
   const accent = isBroadcast ? '#7C3AED' : typeMeta.barColor;
   const phone = alert.residentId?.phone || alert.contactNumber;
 
@@ -50,7 +55,7 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
           <div className="relative flex items-center justify-between">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] px-2.5 py-1 rounded-full bg-white/15 border border-white/25">
               <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-white" style={{ animation: 'gPing 1s ease-out infinite' }} /><span className="relative w-2 h-2 rounded-full bg-white" /></span>
-              {isBroadcast ? 'Estate broadcast' : 'Emergency alert'}
+              {isBroadcast ? `${terms.site} broadcast` : 'Emergency alert'}
             </span>
             <div className="flex items-center gap-1">
               {queueCount > 1 && <span className="text-[11px] font-bold bg-white text-red-600 px-2 py-0.5 rounded-full mr-1">+{queueCount - 1} more</span>}
@@ -64,7 +69,7 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
             </span>
             <div className="min-w-0">
               <p className="text-[12px] font-semibold uppercase tracking-wider text-white/70">{typeMeta.label} · {sev}</p>
-              <h2 className="text-[22px] font-bold leading-tight" style={{ color: '#fff' }}>{alert.title || (isBroadcast ? 'Estate emergency broadcast' : typeMeta.label)}</h2>
+              <h2 className="text-[22px] font-bold leading-tight" style={{ color: '#fff' }}>{alert.title || (isBroadcast ? `${terms.site} emergency broadcast` : typeMeta.label)}</h2>
             </div>
           </div>
         </div>
@@ -187,7 +192,19 @@ export default function AppLayout({ children }) {
   const page = NAV.find((n) => (n.to === '/verify' ? pathname === '/verify' || pathname === '/' : pathname.startsWith(n.to))) || NAV[0];
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 30000); return () => clearInterval(t); }, []);
-  const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'Your estate';
+  const { terms } = useSite();
+  const nav = useNav();
+  const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : `Your ${terms.site.toLowerCase()}`;
+  // Bottom bar keeps 5 slots with Scan in the middle. Estates (no extra
+  // modules) see the same bar as always; module tabs (Deliveries / Staff
+  // check) take the place of Settings, then Calls — both stay in the menu.
+  const byTo = (to) => nav.find((n) => n.to === to);
+  const extras = nav.filter((n) => n.module && !n.menuOnly);
+  const bottomNav = (
+    extras.length >= 2 ? [byTo('/log'), extras[0], byTo('/verify'), extras[1], byTo('/alerts')]
+    : extras.length === 1 ? [byTo('/log'), extras[0], byTo('/verify'), byTo('/alerts'), byTo('/calls')]
+    : [byTo('/log'), byTo('/alerts'), byTo('/verify'), byTo('/calls'), byTo('/settings')]
+  ).filter(Boolean);
 
   return (
     <div className="flex h-screen bg-[#F4F6F8] overflow-hidden">
@@ -268,7 +285,7 @@ export default function AppLayout({ children }) {
       {/* ── Mobile bottom navigation with a raised Scan button ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#07111F] border-t border-white/[0.06]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="grid grid-cols-5 items-end h-16">
-          {[NAV[1], NAV[2], NAV[0], NAV[3], NAV[4]].map(({ to, icon: Icon, label }) => {
+          {bottomNav.map(({ to, icon: Icon, label, short }) => {
             const center = to === '/verify';
             return (
               <NavLink key={to} to={to} end={center} className="relative flex flex-col items-center justify-center h-full gap-0.5" style={{ textDecoration: 'none' }}>
@@ -286,7 +303,7 @@ export default function AppLayout({ children }) {
                       <Icon size={22} className={isActive ? 'text-blue-400' : 'text-white/40'} strokeWidth={isActive ? 2.2 : 1.8} />
                       {to === '/alerts' && alertBadge > 0 && <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9.5px] font-bold flex items-center justify-center border-2 border-[#07111F]">{alertBadge > 99 ? '99+' : alertBadge}</span>}
                     </span>
-                    <span className={`text-[10.5px] font-semibold ${isActive ? 'text-blue-400' : 'text-white/45'}`}>{label}</span>
+                    <span className={`text-[10.5px] font-semibold whitespace-nowrap ${isActive ? 'text-blue-400' : 'text-white/45'}`}>{short || label}</span>
                     {isActive && <span className="absolute top-0 w-8 h-[3px] rounded-b bg-blue-400" />}
                   </>
                 )}

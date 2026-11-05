@@ -7,7 +7,11 @@ import {
   LogIn, LogOut, AlertTriangle, User,
   Phone, Home, Calendar, Shield, FileText, Clock, Hourglass,
   Wifi, WifiOff, CloudUpload, ShieldCheck, ShieldX, ChevronRight, Users, DoorOpen, X,
+  BookOpenCheck, Clock3, MapPin, Navigation,
 } from 'lucide-react';
+import { useSite } from '../context/SiteContext';
+import { CATEGORY_STYLE, localGateInfo } from '../utils/siteTypes';
+import { CategoryChip, CATEGORY_ICON } from '../components/ui/CategoryChip';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import { format, isToday } from 'date-fns';
@@ -38,9 +42,86 @@ function extractCode(raw) {
 const safeDate = (d) => { if (!d) return null; const x = new Date(d); return isNaN(x) ? null : x; };
 const fmt = (d, f) => { const x = safeDate(d); return x ? format(x, f) : '—'; };
 
-function unitLabel(v) {
-  if (v?.hostUnitId?.unitNumber) return `Unit ${v.hostUnitId.unitNumber}${v.hostUnitId.block ? ` · Block ${v.hostUnitId.block}` : ''}`;
-  return '—';
+// Host's unit in the site's words: "Unit 12 · Block A" (estate), "Room 204",
+// "Class JSS2", "Ward B", "Department Finance".
+function unitLabel(v, terms) {
+  const u = v?.hostUnitId;
+  if (!u?.unitNumber) return '—';
+  const word = terms?.unit || 'Unit';
+  let block = u.block || '';
+  if (block && terms?.block && !block.toLowerCase().includes(terms.block.toLowerCase())) block = `${block} ${terms.block}`;
+  else if (block && word === 'Unit') block = `Block ${block}`;
+  return `${word} ${u.unitNumber}${block ? ` · ${block}` : ''}`;
+}
+
+// ── Pass category (school pickup, contractor, delivery, patient visit…) ──
+// Where the visitor is going (host's hall / building) with a Google Maps link
+function PlaceStrip({ place }) {
+  if (!place?.name) return null;
+  const url = place.directionsUrl
+    || (place.lat != null && place.lng != null ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}` : null);
+  return (
+    <div className="mb-4 rounded-2xl p-3 flex items-center gap-3" style={{ background: '#EFF6FF', border: '2px solid #BFDBFE' }}>
+      <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#DBEAFE', color: '#1D4ED8' }}>
+        <MapPin size={20} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="g-label" style={{ color: '#1D4ED8' }}>Going to</div>
+        <div className="text-[17px] font-bold truncate" style={{ color: '#0F172A' }}>{place.name}</div>
+      </div>
+      {url && (
+        <a href={url} target="_blank" rel="noreferrer"
+          className="h-11 px-4 rounded-xl flex items-center gap-1.5 text-[13.5px] font-semibold text-white flex-shrink-0 active:scale-[0.97] transition-transform"
+          style={{ background: BRAND_GRAD, textDecoration: 'none' }}>
+          <Navigation size={15} /> Directions
+        </a>
+      )}
+    </div>
+  );
+}
+
+function CategoryBanner({ visitor, label }) {
+  const cat = visitor?.category;
+  if (!cat || cat === 'guest') return null;
+  const d = visitor.details || {};
+  const st = CATEGORY_STYLE[cat] || { bg: '#F1F5F9', fg: '#475569', border: '#E2E8F0', grad: 'linear-gradient(135deg,#64748B,#334155)' };
+  const Icon = CATEGORY_ICON[cat] || FileText;
+  let headline = null;
+  const rows = [];
+  if (cat === 'pickup') {
+    headline = d.studentName ? <>Collecting: {d.studentName}{d.studentClass ? <span style={{ opacity: 0.85 }}> ({d.studentClass})</span> : null}</> : 'Collecting: — (no student named)';
+  } else if (cat === 'patient_visit') {
+    headline = d.patientName ? <>Patient: {d.patientName}</> : 'Patient: —';
+    if (d.ward) rows.push(['Ward', d.ward]);
+  } else {
+    headline = d.company || '—';
+    if (d.job) rows.push(['Job', d.job]);
+    if (d.goods) rows.push([cat === 'contractor' ? 'Items' : 'Goods', d.goods]);
+    if (d.vehiclePlate) rows.push(['Vehicle', d.vehiclePlate, true]);
+  }
+  return (
+    <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: `2px solid ${st.border}` }}>
+      <div className="px-3.5 py-2 flex items-center gap-2 text-white" style={{ background: st.grad }}>
+        <Icon size={16} />
+        <span className="text-[12.5px] font-extrabold uppercase tracking-[0.12em]">{label}</span>
+      </div>
+      <div className="px-3.5 py-3" style={{ background: st.bg }}>
+        <div className={`${cat === 'pickup' ? 'text-[22px]' : 'text-[19px]'} font-bold leading-tight break-words`} style={{ color: '#0F172A' }}>
+          {headline}
+        </div>
+        {rows.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+            {rows.map(([k, v, mono]) => (
+              <div key={k} className="min-w-0">
+                <span className="text-[10.5px] font-bold uppercase tracking-wider" style={{ color: st.fg }}>{k} </span>
+                <span className={`text-[15px] font-semibold ${mono ? 'font-mono tracking-wider px-1.5 py-0.5 rounded-md bg-white' : ''}`} style={{ color: '#0F172A', border: mono ? `1px solid ${st.border}` : undefined }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function timeWindow(v) {
@@ -178,8 +259,13 @@ function InfoCell({ icon: Icon, label, value, sub, accent }) {
   );
 }
 
-function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset }) {
+function VisitorResultCard({ visitor: raw, code, gate, problem, onCheckIn, onCheckOut, onReset }) {
+  const { terms, categoryLabel, management, type } = useSite();
+  const hoursWord = type === 'university' ? 'hostel visiting hours' : 'visiting hours';
   const visitor = effective(raw);
+  const [accepted, setAccepted] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
   const isExpired     = visitor.status === 'expired';
   const isActive      = visitor.status === 'active';
   const isIn          = visitor.status === 'checked-in';
@@ -199,6 +285,31 @@ function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset 
   }
 
   const win = timeWindow(visitor);
+
+  // Site rules: contractor induction and hospital visiting hours
+  const induction = gate?.induction;
+  const needInduction = isActive && !!induction?.required;
+  const visiting = gate?.visiting;
+  const outside = !!visiting?.outside;
+  const needReason = isActive && (outside || !!problem);
+  const canCheckIn = !busy && (!needInduction || accepted) && (!needReason || reason.trim().length >= 3);
+  if (isActive && (outside || problem)) {
+    tone = 'hold';
+    title = problem?.code === 'PATIENT_VISITOR_LIMIT' ? 'VISITOR LIMIT REACHED' : `OUTSIDE ${hoursWord.toUpperCase()}`;
+    sub = 'Valid pass — entry needs an override reason';
+  } else if (needInduction) {
+    sub = 'Valid pass — safety induction required first';
+  }
+  const doCheckIn = async () => {
+    if (!canCheckIn) return;
+    setBusy(true);
+    try {
+      await onCheckIn({
+        ...(needInduction || induction?.required ? { inductionAccepted: accepted } : {}),
+        ...(needReason && reason.trim() ? { overrideReason: reason.trim() } : {}),
+      });
+    } finally { setBusy(false); }
+  };
 
   return (
     <div className="g-card overflow-hidden g-rise" style={{ borderColor: TONES[tone].border }}>
@@ -223,10 +334,13 @@ function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset 
           </div>
         </div>
 
+        <CategoryBanner visitor={visitor} label={categoryLabel(visitor.category)} />
+        <PlaceStrip place={gate?.place} />
+
         {/* Details */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <InfoCell icon={User}     label="Host"        value={visitor.hostResidentId?.name || '—'} />
-          <InfoCell icon={Home}     label="Unit"        value={unitLabel(visitor)} />
+          <InfoCell icon={Home}     label={terms.unit}  value={unitLabel(visitor, terms)} />
           <InfoCell icon={FileText} label="Purpose"     value={visitor.purpose || '—'} />
           <InfoCell icon={Calendar} label="Time window" value={win.main} sub={win.sub} />
           {visitor.entryTime && (
@@ -251,15 +365,72 @@ function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset 
           {isBlacklisted && (
             <div className="flex items-center gap-3 p-3.5 rounded-2xl text-[13.5px] font-semibold"
               style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
-              <AlertTriangle size={18} className="flex-shrink-0" /> Do not admit — blacklisted by estate management
+              <AlertTriangle size={18} className="flex-shrink-0" /> Do not admit — blacklisted by {management}
             </div>
           )}
+
+          {/* Visiting hours / visitor limit (hospital) */}
+          {isActive && (outside || problem) && (
+            <div className="rounded-2xl overflow-hidden" style={{ border: '2px solid #FCA5A5' }}>
+              <div className="flex items-start gap-3 p-3.5" style={{ background: '#FEF2F2', color: '#B91C1C' }}>
+                <Clock3 size={22} className="flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="text-[15px] font-extrabold uppercase tracking-wide leading-tight">
+                    {problem?.code === 'PATIENT_VISITOR_LIMIT' ? 'Visitor limit reached'
+                      : `Outside ${hoursWord}${visiting?.start ? ` (${visiting.start}–${visiting.end})` : ''}`}
+                  </div>
+                  <div className="text-[12.5px] font-medium mt-0.5" style={{ color: '#991B1B' }}>
+                    {problem?.message && problem.code !== 'OUTSIDE_VISITING_HOURS' ? `${problem.message} ` : ''}
+                    Only admit with a good reason — it is recorded against your name.
+                  </div>
+                </div>
+              </div>
+              <div className="p-3" style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A' }}>
+                <label className="g-label" style={{ color: '#92400E' }} htmlFor="override-reason">Override reason (required to admit)</label>
+                <input id="override-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300}
+                  placeholder="e.g. Doctor approved · critical patient"
+                  className="mt-1 w-full h-12 px-3 rounded-xl text-[15px] outline-none focus:ring-4 focus:ring-amber-500/20"
+                  style={{ background: '#fff', border: '2px solid #FCD34D', color: '#0F172A' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Safety induction (contractors / suppliers) */}
+          {isActive && induction?.text && (induction.required || accepted) && (
+            <div className="rounded-2xl overflow-hidden" style={{ border: `2px solid ${accepted ? '#6EE7B7' : '#FDBA74'}` }}>
+              <div className="px-3.5 py-2 flex items-center gap-2" style={{ background: accepted ? '#ECFDF5' : '#FFF7ED', color: accepted ? '#047857' : '#C2410C' }}>
+                <BookOpenCheck size={17} />
+                <span className="text-[13px] font-extrabold uppercase tracking-wide">Safety induction</span>
+              </div>
+              <div className="max-h-48 overflow-y-auto px-3.5 py-3 text-[14px] leading-relaxed whitespace-pre-wrap"
+                style={{ background: '#fff', color: '#0F172A', borderTop: '1px solid #FED7AA', borderBottom: '1px solid #FED7AA' }}>
+                {induction.text}
+              </div>
+              <label className="flex items-center gap-3 px-3.5 py-3 cursor-pointer select-none" style={{ background: accepted ? '#ECFDF5' : '#FFF7ED' }}>
+                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)}
+                  className="w-6 h-6 flex-shrink-0 accent-emerald-600" />
+                <span className="text-[14px] font-semibold" style={{ color: '#0F172A' }}>Visitor has read and accepted the safety induction</span>
+              </label>
+            </div>
+          )}
+          {!isActive && induction?.acceptedAt && (
+            <div className="flex items-center gap-2 p-3 rounded-xl text-[12.5px] font-semibold" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857' }}>
+              <BookOpenCheck size={15} /> Safety induction accepted {fmt(induction.acceptedAt, 'MMM d, HH:mm')}
+            </div>
+          )}
+
           {isActive && (
-            <button onClick={onCheckIn}
-              className="w-full h-14 rounded-2xl font-semibold text-white text-[16px] flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
-              style={{ background: EMERALD_GRAD, boxShadow: '0 12px 26px -10px rgba(16,185,129,0.65)' }}>
-              <LogIn size={20} /> Check in visitor
+            <button onClick={doCheckIn} disabled={!canCheckIn}
+              className="w-full h-14 rounded-2xl font-semibold text-white text-[16px] flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-45 disabled:active:scale-100"
+              style={{ background: needReason ? 'linear-gradient(135deg,#F59E0B,#B45309)' : EMERALD_GRAD, boxShadow: '0 12px 26px -10px rgba(16,185,129,0.65)' }}>
+              {busy ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <LogIn size={20} />}
+              {needReason ? 'Override & check in' : 'Check in visitor'}
             </button>
+          )}
+          {isActive && !canCheckIn && !busy && (
+            <div className="text-center text-[12px] font-semibold -mt-1" style={{ color: '#B45309' }}>
+              {needInduction && !accepted ? 'Tick the induction box to continue' : 'Type an override reason to continue'}
+            </div>
           )}
           {isIn && (
             <button onClick={onCheckOut}
@@ -288,6 +459,9 @@ function VisitorResultCard({ visitor: raw, code, onCheckIn, onCheckOut, onReset 
 
 export default function SecurityDashboard() {
   const { user } = useAuth();
+  const { site, terms, categoryLabel, management, isEstate } = useSite();
+  const [gate, setGate]             = useState(null);   // server gate rules for the scanned pass
+  const [problem, setProblem]       = useState(null);   // 409 overridable problem from check-in
   const [code, setCode]             = useState('');
   const [visitor, setVisitor]       = useState(null);
   const [state, setState]           = useState(null);
@@ -397,9 +571,13 @@ export default function SecurityDashboard() {
     setLoading(true);
     setVisitor(null);
     setState(null);
+    setGate(null);
+    setProblem(null);
     try {
       const { data } = await visitorAPI.verify(trimmed);
       setVisitor(data.data);
+      const g = data.gate && typeof data.gate === 'object' ? data.gate : localGateInfo(data.data, site);
+      setGate(g);
       if (isPastExpiry(data.data)) {
         setState('expired'); playSound('expired');
         patchVisitor(data.data?._id, { status: 'expired' });
@@ -409,7 +587,9 @@ export default function SecurityDashboard() {
         playSound('click');
       } else {
         setState('found');
-        playSound('click');
+        // Outside visiting hours: warn the guard loudly
+        if (g?.visiting?.outside && data.data?.status === 'active') playSound('error');
+        else playSound('click');
       }
     } catch (err) {
       const status = err.response?.status;
@@ -432,9 +612,13 @@ export default function SecurityDashboard() {
         const cached = findCachedVisitorByCode(estateId, trimmed);
         if (cached) {
           setVisitor(cached);
+          // No server gate info offline — apply the site's rules locally
+          let g = {};
+          try { g = localGateInfo(cached, site); } catch { g = {}; }
+          setGate(g);
           if (isPastExpiry(cached) || cached.status === 'expired') { setState('expired'); playSound('expired'); return; }
           setState(cached.status === 'pending' && cached.awaitingApproval ? 'awaiting_approval' : 'found');
-          playSound('click');
+          playSound(g?.visiting?.outside && cached.status === 'active' ? 'error' : 'click');
           toast('Offline — matched from cached visitor list', { icon: '📶', duration: 4000 });
           return;
         }
@@ -490,8 +674,8 @@ export default function SecurityDashboard() {
     verifyCode(v.visitorCode);
   };
 
-  const queueOffline = (type, label) => {
-    const pending = enqueueMutation({ type, visitorId: visitor._id, visitorName: visitor.visitorName });
+  const queueOffline = (type, label, body) => {
+    const pending = enqueueMutation({ type, visitorId: visitor._id, visitorName: visitor.visitorName, ...(body && Object.keys(body).length ? { body } : {}) });
     setPendingCount(pending);
     playSound('click');
     toast.success(`${visitor.visitorName} ${label} (queued, will sync when back online)`, { icon: '📶', duration: 5000 });
@@ -504,9 +688,10 @@ export default function SecurityDashboard() {
     ]);
   };
 
-  const handleCheckIn = async () => {
+  const handleCheckIn = async (body = {}) => {
     try {
-      await visitorAPI.checkIn(visitor._id);
+      await visitorAPI.checkIn(visitor._id, body);
+      setProblem(null);
       playSound('checkin');
       toast.success(`✅ ${visitor.visitorName} checked in`);
       const now = new Date().toISOString();
@@ -514,8 +699,24 @@ export default function SecurityDashboard() {
       patchVisitor(visitor._id, { status: 'checked-in', entryTime: now });
       setSessionLog((prev) => [{ name: visitor.visitorName, action: 'Check In', time: new Date() }, ...prev.slice(0, 9)]);
     } catch (err) {
-      if (!err.response) { queueOffline('checkIn', 'checked in'); return; }
-      if (err.response?.data?.code === 'PASS_EXPIRED') {
+      if (!err.response) { queueOffline('checkIn', 'checked in', body); return; }
+      const resp = err.response?.data || {};
+      // Contractor / supplier must accept the safety induction first
+      if (err.response.status === 428 || resp.code === 'INDUCTION_REQUIRED') {
+        playSound('error');
+        setGate((g) => ({ ...(g || {}), ...(resp.gate || {}), induction: { required: true, text: resp.gate?.induction?.text || g?.induction?.text || site.inductionText || 'Read the site safety rules to the visitor.', acceptedAt: null } }));
+        toast.error(resp.message || 'Safety induction required before entry', { duration: 5000 });
+        return;
+      }
+      // Hospital: outside visiting hours / patient visitor limit — guard may override with a reason
+      if (resp.overridable || resp.code === 'OUTSIDE_VISITING_HOURS' || resp.code === 'PATIENT_VISITOR_LIMIT') {
+        playSound('error');
+        if (resp.gate) setGate((g) => ({ ...(g || {}), ...resp.gate }));
+        setProblem({ code: resp.code, message: resp.message });
+        toast.error(`${resp.message || 'Entry needs an override'} Enter a reason to admit.`, { duration: 6000 });
+        return;
+      }
+      if (resp.code === 'PASS_EXPIRED') {
         playSound('expired'); setState('expired');
         setVisitor((v) => ({ ...v, status: 'expired' })); patchVisitor(visitor._id, { status: 'expired' });
         return;
@@ -539,7 +740,7 @@ export default function SecurityDashboard() {
     }
   };
 
-  const reset = () => { setCode(''); setVisitor(null); setState(null); };
+  const reset = () => { setCode(''); setVisitor(null); setState(null); setGate(null); setProblem(null); };
 
   const inputBorder =
     state === 'not_found' || state === 'blacklisted' || state === 'expired' ? '#F87171'
@@ -555,7 +756,8 @@ export default function SecurityDashboard() {
   const q = listQuery.trim().toLowerCase();
   const filtered = q
     ? activeList.items.filter((v) =>
-        [v.visitorName, v.visitorCode, v.hostResidentId?.name, v.hostUnitId?.unitNumber, v.purpose]
+        [v.visitorName, v.visitorCode, v.hostResidentId?.name, v.hostUnitId?.unitNumber, v.purpose,
+          categoryLabel(v.category), v.details?.company, v.details?.studentName, v.details?.patientName, v.details?.vehiclePlate]
           .some((s) => String(s || '').toLowerCase().includes(q)))
     : activeList.items;
 
@@ -728,7 +930,7 @@ export default function SecurityDashboard() {
                 <div className="flex items-center gap-3 p-3.5 rounded-xl text-[13.5px] font-semibold"
                   style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
                   <AlertTriangle size={18} className="flex-shrink-0" />
-                  This visitor has been blacklisted by estate management.
+                  This visitor has been blacklisted by {management}.
                 </div>
                 <button onClick={reset}
                   className="w-full h-12 rounded-2xl text-[14px] font-semibold hover:bg-slate-50"
@@ -742,7 +944,7 @@ export default function SecurityDashboard() {
           {/* ── AWAITING ESTATE APPROVAL — guards are deliberately not told why ── */}
           {state === 'awaiting_approval' && (
             <div className="g-card overflow-hidden g-rise" style={{ borderColor: TONES.hold.border }}>
-              <Verdict tone="hold" title="HOLD — NOT YET APPROVED" sub="Pass is awaiting estate management approval" code={visitor?.visitorCode || code} />
+              <Verdict tone="hold" title="HOLD — NOT YET APPROVED" sub={`Pass is awaiting ${management} approval`} code={visitor?.visitorCode || code} />
               <div className="p-4 sm:p-5 space-y-3">
                 {visitor && (
                   <div className="flex items-center gap-4">
@@ -754,7 +956,7 @@ export default function SecurityDashboard() {
                   </div>
                 )}
                 <div className="p-3.5 rounded-xl text-[13.5px] font-medium" style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E' }}>
-                  Please ask the visitor to wait and contact the estate office. Entry is allowed once management approves the pass.
+                  Please ask the visitor to wait and contact the {isEstate ? 'estate ' : ''}office. Entry is allowed once management approves the pass.
                   Medical and emergency visitors should always be let in.
                 </div>
                 <button onClick={reset}
@@ -781,6 +983,9 @@ export default function SecurityDashboard() {
                   </div>
                 </div>
 
+                <CategoryBanner visitor={visitor} label={categoryLabel(visitor.category)} />
+                <PlaceStrip place={gate?.place} />
+
                 {/* Host info */}
                 <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.06)' }}>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[14px] font-semibold flex-shrink-0"
@@ -791,7 +996,7 @@ export default function SecurityDashboard() {
                     <div className="g-label">Pinged host</div>
                     <div className="text-[14px] font-semibold truncate" style={{ color: '#0F172A' }}>
                       {visitor.hostResidentId?.name || 'Host'}
-                      {visitor.hostUnitId?.unitNumber ? ` · Unit ${visitor.hostUnitId.unitNumber}` : ''}
+                      {visitor.hostUnitId?.unitNumber ? ` · ${terms.unit} ${visitor.hostUnitId.unitNumber}` : ''}
                     </div>
                   </div>
                   {visitor.hostResidentId?.phone && (
@@ -805,7 +1010,7 @@ export default function SecurityDashboard() {
 
                 <div className="flex items-start gap-2 p-3 rounded-xl text-[12.5px]" style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E' }}>
                   <Hourglass size={14} className="flex-shrink-0 mt-0.5 animate-pulse" />
-                  <span className="font-medium">Awaiting approval. This screen will auto-advance when the resident taps Allow.</span>
+                  <span className="font-medium">Awaiting approval. This screen will auto-advance when the {isEstate ? 'resident' : 'host'} taps Allow.</span>
                 </div>
 
                 <button onClick={reset}
@@ -819,7 +1024,8 @@ export default function SecurityDashboard() {
 
           {/* ── FOUND ── */}
           {(state === 'found' || state === 'expired') && visitor && (
-            <VisitorResultCard visitor={state === 'expired' ? { ...visitor, status: 'expired' } : visitor} code={code}
+            <VisitorResultCard key={visitor._id || code} visitor={state === 'expired' ? { ...visitor, status: 'expired' } : visitor} code={code}
+              gate={state === 'expired' ? null : gate} problem={problem}
               onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} onReset={reset} />
           )}
           {state === 'expired' && !visitor && (
@@ -870,7 +1076,7 @@ export default function SecurityDashboard() {
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
                   <input value={listQuery} onChange={(e) => setListQuery(e.target.value)}
-                    placeholder="Filter by name, code, host or unit"
+                    placeholder={`Filter by name, code, host or ${terms.unit.toLowerCase()}`}
                     className="w-full h-10 pl-9 pr-3 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-blue-500/20"
                     style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }} />
                 </div>
@@ -899,9 +1105,15 @@ export default function SecurityDashboard() {
                       style={{ borderTop: i > 0 ? '1px solid rgba(15,23,42,0.05)' : 'none', minHeight: 60 }}>
                       <Avatar visitor={v} size={38} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-semibold truncate" style={{ color: '#0F172A' }}>{v.visitorName}</div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[14px] font-semibold truncate" style={{ color: '#0F172A' }}>{v.visitorName}</span>
+                          <CategoryChip category={v.category} label={categoryLabel(v.category)} />
+                        </div>
                         <div className="text-[12px] truncate" style={{ color: '#94A3B8' }}>
-                          {v.hostResidentId?.name || 'Host'}{v.hostUnitId?.unitNumber ? ` · Unit ${v.hostUnitId.unitNumber}` : ''}
+                          {v.category === 'pickup' && v.details?.studentName ? `Collecting ${v.details.studentName} · `
+                            : v.category === 'patient_visit' && v.details?.patientName ? `Patient ${v.details.patientName} · `
+                            : ['contractor', 'supplier', 'delivery'].includes(v.category) && v.details?.company ? `${v.details.company} · ` : ''}
+                          {v.hostResidentId?.name || 'Host'}{v.hostUnitId?.unitNumber ? ` · ${terms.unit} ${v.hostUnitId.unitNumber}` : ''}
                           {v.visitorCode && <span className="font-mono tracking-wider"> · {v.visitorCode}</span>}
                         </div>
                       </div>
@@ -972,7 +1184,7 @@ export default function SecurityDashboard() {
                 <FileText size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-semibold" style={{ color: '#0F172A' }}>Estate constitution</div>
+                <div className="text-[14px] font-semibold" style={{ color: '#0F172A' }}>{isEstate ? 'Estate constitution' : `${terms.site} rules`}</div>
                 <div className="text-[12px]" style={{ color: '#94A3B8' }}>
                   {constitution.pageCount ? `${constitution.pageCount} pages · ` : ''}Reference for gate policy
                 </div>

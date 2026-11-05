@@ -4,6 +4,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, RefreshCw, ShieldCheck, Users, History, X } from 'lucide-react';
 import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
+import { useSite } from '../context/SiteContext';
 
 // Estate staff calling: managers can call any resident or guard in the
 // estate for free, and see their recent calls (incl. emergency calls in).
@@ -67,6 +68,7 @@ function EmptyState({ icon: Icon, title, hint }) {
 }
 
 export default function Calls() {
+  const { terms, isEstate } = useSite();
   const { call, startCall } = useCall() || {};
   const [dir, setDir] = useState({ neighbours: [], staff: [] });
   const [history, setHistory] = useState([]);
@@ -111,7 +113,7 @@ export default function Calls() {
   }, [history]);
 
   const tabs = [
-    ['residents', 'Residents', dir.neighbours.length],
+    ['residents', terms.members, dir.neighbours.length],
     ['staff', 'Staff', dir.staff.length],
     ['recent', 'Recent', null],
   ];
@@ -132,14 +134,14 @@ export default function Calls() {
 
       <div className="g-card overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-          <span className="g-label">{tab === 'staff' ? 'Security & management' : 'Residents'}</span>
+          <span className="g-label">{tab === 'staff' ? 'Security & management' : terms.members}</span>
           <span className="text-xs" style={{ color: '#94A3B8' }}>{filtered.length} {filtered.length === 1 ? 'contact' : 'contacts'}</span>
         </div>
         {loading ? (
           <div className="py-16 flex justify-center"><RefreshCw size={22} className="animate-spin text-blue-500" /></div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users}
-            title={q ? `No match for “${q}”` : tab === 'staff' ? 'No other staff in this estate yet' : 'No residents yet'}
+            title={q ? `No match for “${q}”` : tab === 'staff' ? `No other staff in this ${terms.site.toLowerCase()} yet` : `No ${terms.members.toLowerCase()} yet`}
             hint={q ? 'Try a name or unit number' : null} />
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -150,7 +152,7 @@ export default function Calls() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{p.name}</div>
                   <div className="text-xs truncate flex items-center gap-1.5 mt-0.5" style={{ color: '#94A3B8' }}>
-                    <span className="truncate">{p.role === 'resident' ? (p.unit || 'Resident') : ROLE_LABEL[p.role]}</span>
+                    <span className="truncate">{p.role === 'resident' ? (p.unit || terms.member) : (isEstate ? ROLE_LABEL[p.role] : p.role === 'security' ? 'Security' : terms.manager)}</span>
                     {p.online && <span className="shrink-0 font-semibold" style={{ color: '#059669' }}>· online</span>}
                   </div>
                 </div>
@@ -232,7 +234,7 @@ export default function Calls() {
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <h1 className="text-[21px] font-semibold" style={{ color: '#0F172A', letterSpacing: '-0.01em' }}>Calls</h1>
-          <p className="text-[13px] mt-0.5" style={{ color: '#475569' }}>Call any resident, manager or fellow guard.</p>
+          <p className="text-[13px] mt-0.5" style={{ color: '#475569' }}>Call any {terms.member.toLowerCase()}, manager or fellow guard.</p>
         </div>
         <button onClick={load} aria-label="Refresh"
           className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-slate-500 hover:text-blue-600 shrink-0"

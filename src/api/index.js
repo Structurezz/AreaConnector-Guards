@@ -31,7 +31,7 @@ export const visitorAPI = {
   getOne: (id) => api.get(`/visitors/${id}`),
   preRegister: (data) => api.post('/visitors', data),
   verify: (code) => api.get(`/visitors/verify/${code}`),
-  checkIn: (id) => api.patch(`/visitors/${id}/checkin`),
+  checkIn: (id, body) => api.patch(`/visitors/${id}/checkin`, body || {}),
   checkOut: (id) => api.patch(`/visitors/${id}/checkout`),
   blacklist: (id) => api.patch(`/visitors/${id}/blacklist`),
 };
@@ -110,4 +110,18 @@ export const callAPI = {
 // Personal safety: residents sharing live location with staff
 export const safetyAPI = {
   activeLocations: () => api.get('/safety/location/active'),
+};
+
+// Site type, wording and modules (estate / school / hotel / industrial / hospital)
+export const siteAPI = {
+  get: () => api.get('/site'),
+  staffCheck: (q) => api.get('/site/staff-check', { params: { q } }),
+  places: () => api.get('/site/places'),
+};
+
+// Deliveries & vehicles logged at the gate (module gatelog)
+export const gateLogAPI = {
+  list: (params) => api.get('/gatelog', { params }),
+  create: (data) => api.post('/gatelog', data),
+  markOut: (id, data) => api.patch(`/gatelog/${id}/out`, data || {}),
 };

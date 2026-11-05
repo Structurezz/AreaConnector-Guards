@@ -13,7 +13,7 @@ export async function drainQueue({ onProgress } = {}) {
 
   for (const action of queue) {
     try {
-      if (action.type === 'checkIn')       await visitorAPI.checkIn(action.visitorId);
+      if (action.type === 'checkIn')       await visitorAPI.checkIn(action.visitorId, action.body);
       else if (action.type === 'checkOut') await visitorAPI.checkOut(action.visitorId);
       else { removeFromQueue(action.id); continue; }
       removeFromQueue(action.id);

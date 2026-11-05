@@ -17,6 +17,10 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+    // A site module (e.g. deliveries) was switched off — let the app re-sync.
+    if (err.response?.status === 403 && err.response?.data?.code === 'MODULE_OFF') {
+      window.dispatchEvent(new CustomEvent('site:module_off', { detail: err.response.data }));
+    }
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {

@@ -2,15 +2,34 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { QrCode, ClipboardList, Siren, LogOut, Settings as SettingsIcon, PhoneCall, Clock } from 'lucide-react';
+import { QrCode, ClipboardList, Siren, LogOut, Settings as SettingsIcon, PhoneCall, Clock, Truck, BadgeCheck, MapPin } from 'lucide-react';
+import { useSite } from '../../context/SiteContext';
 
 export const NAV = [
   { to: '/verify',   icon: QrCode,        label: 'Gate',       hint: 'Verify visitors' },
   { to: '/log',      icon: ClipboardList, label: 'Entry log',  hint: 'Who came and went' },
+  { to: '/deliveries', icon: Truck,       label: 'Deliveries', hint: 'Deliveries & vehicles', module: 'gatelog' },
+  { to: '/staff',    icon: BadgeCheck,    label: 'Staff check', short: 'Staff', hint: 'Shift & stay check', module: 'shifts' },
+  { to: '/places',   icon: MapPin,        label: 'Places',     hint: 'Directions on Google Maps', menuOnly: true, hideOnEstate: true },
   { to: '/alerts',   icon: Siren,         label: 'Alerts',     hint: 'Emergencies & reports' },
-  { to: '/calls',    icon: PhoneCall,     label: 'Calls',      hint: 'Residents & manager' },
+  { to: '/calls',    icon: PhoneCall,     label: 'Calls',      hint: 'Residents & manager', hintFn: (t) => `${t.members} · office` },
   { to: '/settings', icon: SettingsIcon,  label: 'Settings',   hint: 'Profile & password' },
 ];
+
+// NAV filtered to the site's switched-on modules, with site wording.
+export function useNav() {
+  const { modules, terms, isEstate } = useSite();
+  return NAV
+    .filter((n) => (!n.module || modules?.[n.module]) && !(n.hideOnEstate && isEstate))
+    .map((n) => {
+      let out = n.hintFn && !isEstate ? { ...n, hint: n.hintFn(terms) } : n;
+      // University: the staff check is mainly a student ID check
+      if (n.to === '/staff' && terms.idCheck && terms.idCheck !== n.label) {
+        out = { ...out, label: terms.idCheck, short: terms.idCheck.split(' ')[0] === 'ID' ? 'ID check' : out.short, hint: 'Matric no. or name' };
+      }
+      return out;
+    });
+}
 
 // When this browser started the current shift (first load after sign-in)
 export function useShift() {
@@ -46,7 +65,9 @@ export default function Sidebar({ mobile = false, onClose, alertCount = 0 }) {
   const { connected } = useSocket() || {};
   const navigate = useNavigate();
   const shift = useShift();
-  const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : 'Your estate';
+  const { terms } = useSite();
+  const nav = useNav();
+  const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : `Your ${terms.site.toLowerCase()}`;
 
   return (
     <aside className={`flex flex-col h-full ${mobile ? 'w-[280px]' : 'w-[260px]'}`}
@@ -78,7 +99,7 @@ export default function Sidebar({ mobile = false, onClose, alertCount = 0 }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
-        {NAV.map(({ to, icon: Icon, label, hint }) => (
+        {nav.map(({ to, icon: Icon, label, hint }) => (
           <NavLink key={to} to={to} end={to === '/verify'} onClick={onClose}
             className={({ isActive }) => `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${isActive ? 'bg-blue-500/[0.14]' : 'hover:bg-white/[0.05]'}`}
             style={{ textDecoration: 'none' }}>

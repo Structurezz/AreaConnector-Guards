@@ -14,6 +14,7 @@ import Pagination from '../components/ui/Pagination';
 import Portal from '../components/ui/Portal';
 import { upsertAlert } from '../utils/alertEvents';
 import CallButton from '../components/calls/CallButton';
+import { useSite } from '../context/SiteContext';
 
 const PAGE_SIZE = 15;
 
@@ -42,14 +43,31 @@ const DO_THIS = ['Stay indoors', 'Lock your doors', 'Avoid the area', 'Come out 
 const ago = (d) => (d ? formatDistanceToNow(new Date(d), { addSuffix: true }) : '');
 const ROLE_WORD = { security: 'Guard', resident: 'Resident', estate_manager: 'Estate manager', super_admin: 'AreaConnect' };
 
+// Site wording (estates keep the original text word for word)
+function siteWho(terms, isEstate) {
+  if (isEstate) return { who: WHO, short: WHO_SHORT, role: ROLE_WORD };
+  const site = terms.site.toLowerCase(), members = terms.members.toLowerCase();
+  return {
+    who: WHO.map((w) => (
+      w.v === 'all' ? { ...w, word: `Everyone at the ${site}`, sub: `All ${members}, manager and guards` }
+      : w.v === 'staff' ? { ...w, sub: `Not ${members}` }
+      : w.v === 'estate_manager' ? { ...w, sub: terms.manager }
+      : w)),
+    short: { ...WHO_SHORT, all: `everyone at the ${site}`, estate_manager: `the ${terms.manager.toLowerCase()}` },
+    role: { ...ROLE_WORD, resident: terms.member, estate_manager: terms.manager },
+  };
+}
+
 /* ── One alert: what, who, where — then Respond → Resolve ─────────── */
 function AlertCard({ a, onAck, onResolve, busy }) {
+  const { terms, isEstate } = useSite();
+  const W = siteWho(terms, isEstate);
   const k = KIND[a.type] || KIND.other;
   const open = a.status === 'open';
   const done1 = !open;
   const who = a.residentId?.name || 'Someone';
-  const role = ROLE_WORD[a.raisedByRole || a.residentId?.role] || 'Resident';
-  const house = a.unitId ? `${a.unitId.block ? `Block ${a.unitId.block} · ` : ''}Unit ${a.unitId.unitNumber}` : null;
+  const role = W.role[a.raisedByRole || a.residentId?.role] || W.role.resident;
+  const house = a.unitId ? `${a.unitId.block ? `Block ${a.unitId.block} · ` : ''}${terms.unit} ${a.unitId.unitNumber}` : null;
   const phone = a.residentId?.phone || a.contactNumber;
   const urgent = open && (a.severity === 'critical' || a.severity === 'high');
   const lvl = LEVEL.find((l) => l.v === a.severity);
@@ -65,7 +83,7 @@ function AlertCard({ a, onAck, onResolve, busy }) {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-[16px] font-semibold text-slate-900">{a.isEmergencyBroadcast ? 'Estate broadcast' : k.word}</p>
+              <p className="text-[16px] font-semibold text-slate-900">{a.isEmergencyBroadcast ? `${terms.site} broadcast` : k.word}</p>
               {open && !a.isEmergencyBroadcast && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />Needs response</span>}
               {!open && !a.isEmergencyBroadcast && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Guard on the way</span>}
               {lvl && a.severity !== 'medium' && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${lvl.color}12`, color: lvl.color }}>{lvl.word}</span>}
@@ -175,6 +193,8 @@ function Chips({ items, value, onPick }) {
 }
 
 function SendAlertWizard({ onClose }) {
+  const { terms, isEstate } = useSite();
+  const { who: WHO, short: WHO_SHORT } = siteWho(terms, isEstate);
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ title: '', note: '', type: '', severity: '', location: '', actionRequired: '', contactNumber: user?.phone || '', audience: '' });
@@ -288,6 +308,7 @@ function SendAlertWizard({ onClose }) {
 }
 
 export default function SecurityAlerts() {
+  const { terms } = useSite();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -354,7 +375,7 @@ export default function SecurityAlerts() {
           </span>
           <div className="min-w-0">
             <p className="text-[15px] font-semibold text-slate-900">{loading ? 'Checking…' : openCount ? `${openCount} alert${openCount === 1 ? '' : 's'} need${openCount === 1 ? 's' : ''} a response` : 'All clear'}</p>
-            <p className="text-[12.5px] text-slate-500">{openCount ? 'Respond first, then resolve when it is safe.' : 'No open alerts in the estate right now.'}</p>
+            <p className="text-[12.5px] text-slate-500">{openCount ? 'Respond first, then resolve when it is safe.' : `No open alerts in the ${terms.site.toLowerCase()} right now.`}</p>
           </div>
         </div>
         <button onClick={() => setShowBroadcast(true)} className="h-12 sm:h-[60px] px-5 rounded-xl sm:rounded-2xl text-[14.5px] font-semibold text-white flex items-center justify-center gap-2.5 bg-slate-900 hover:bg-slate-800">

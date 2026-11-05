@@ -6,6 +6,7 @@ import Calls from './pages/Calls';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { SiteProvider, useSite } from './context/SiteContext';
 import AppLayout from './components/layout/AppLayout';
 import { LoadingScreen } from './components/ui/Spinner';
 import { Toaster } from 'react-hot-toast';
@@ -16,6 +17,9 @@ import SecurityDashboard from './pages/Dashboard';
 import SecurityLog from './pages/Log';
 import SecurityAlerts from './pages/Alerts';
 import SecuritySettings from './pages/Settings';
+import Deliveries from './pages/Deliveries';
+import StaffCheck from './pages/StaffCheck';
+import Places from './pages/Places';
 
 function RequireSecurity({ children }) {
   const { user, loading } = useAuth();
@@ -34,6 +38,13 @@ function RequireSecurity({ children }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+// Module pages: only reachable while the site has the module switched on
+function RequireModule({ module, children }) {
+  const { modules } = useSite();
+  if (!modules?.[module]) return <Navigate to="/verify" replace />;
+  return children;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -46,6 +57,9 @@ function AppRoutes() {
       <Route path="/log" element={<RequireSecurity><SecurityLog /></RequireSecurity>} />
       <Route path="/alerts" element={<RequireSecurity><SecurityAlerts /></RequireSecurity>} />
       <Route path="/calls" element={<RequireSecurity><Calls /></RequireSecurity>} />
+      <Route path="/deliveries" element={<RequireSecurity><RequireModule module="gatelog"><Deliveries /></RequireModule></RequireSecurity>} />
+      <Route path="/staff" element={<RequireSecurity><RequireModule module="shifts"><StaffCheck /></RequireModule></RequireSecurity>} />
+      <Route path="/places" element={<RequireSecurity><Places /></RequireSecurity>} />
       <Route path="/settings" element={<RequireSecurity><SecuritySettings /></RequireSecurity>} />
       <Route path="/" element={<Navigate to="/verify" replace />} />
       <Route path="*" element={<Navigate to="/verify" replace />} />
@@ -59,6 +73,7 @@ export default function App() {
       <SeoTracker />
       <AuthProvider>
         <SocketProvider>
+          <SiteProvider>
           <CallProvider>
           <CallOverlay />
           <UpdateBanner />
@@ -75,6 +90,7 @@ export default function App() {
             success: { iconTheme: { primary: '#10B981', secondary: '#ECFDF5' } },
           }} />
           </CallProvider>
+          </SiteProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
