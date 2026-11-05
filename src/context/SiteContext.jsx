@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { siteAPI } from '../api';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
-import { fallbackSite, CATEGORY_INFO, normType } from '../utils/siteTypes';
+import { fallbackSite, CATEGORY_INFO, normType, readLastSiteType, writeLastSiteType } from '../utils/siteTypes';
 
 // The site's type, wording (terms) and modules. Renders with the estate
 // fallback (or the last cached config) until GET /api/site returns, and
@@ -28,6 +28,9 @@ function normalise(raw, type) {
     modules: { ...base.modules, ...(raw.modules || {}) },
     passCategories: Array.isArray(raw.passCategories) ? raw.passCategories : base.passCategories,
     visitingHours: { ...base.visitingHours, ...(raw.visitingHours || {}) },
+    roles: Array.isArray(raw.roles) && raw.roles.length ? raw.roles : base.roles,
+    defaultRole: raw.defaultRole || base.defaultRole,
+    requestKinds: Array.isArray(raw.requestKinds) ? raw.requestKinds : base.requestKinds,
   };
 }
 
@@ -36,7 +39,8 @@ export const SiteProvider = ({ children }) => {
   const { subscribe } = useSocket() || {};
   const estateObj = user?.estateId && typeof user.estateId === 'object' ? user.estateId : null;
   const estateId = estateObj?._id || user?.estateId || null;
-  const populatedType = estateObj?.site?.type;
+  // Nothing loaded yet (signed out, first boot) → the last type this device saw
+  const populatedType = estateObj?.site?.type || readLastSiteType();
 
   const [raw, setRaw] = useState(() => (estateId ? readCache(estateId) : null));
   const [loaded, setLoaded] = useState(false);
@@ -78,6 +82,10 @@ export const SiteProvider = ({ children }) => {
     return () => window.removeEventListener('site:module_off', onOff);
   }, [refresh]);
 
+  // Remember the site type on this device for the next boot / login screen
+  const knownType = raw?.type || estateObj?.site?.type;
+  useEffect(() => { if (knownType) writeLastSiteType(normType(knownType)); }, [knownType]);
+
   const value = useMemo(() => {
     const site = normalise(raw, populatedType);
     const isEstate = site.type === 'estate';
@@ -87,18 +95,23 @@ export const SiteProvider = ({ children }) => {
     };
     // "estate management" stays word-for-word for estates
     const management = isEstate ? 'estate management' : 'management';
-    return { site, terms: site.terms, modules: site.modules, type: site.type, isEstate, loaded, refresh, categoryLabel, management };
+    return { site, terms: site.terms, modules: site.modules, type: site.type, isEstate, loaded, refresh, categoryLabel, management, roles: site.roles, requestKinds: site.requestKinds };
   }, [raw, populatedType, loaded, refresh]);
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>;
 };
 
-const FALLBACK = (() => {
-  const site = fallbackSite('estate');
+// Outside the provider: the last site type this device saw (estate by default)
+const fallbackValue = () => {
+  const site = fallbackSite(readLastSiteType());
+  const isEstate = site.type === 'estate';
   return {
-    site, terms: site.terms, modules: site.modules, type: 'estate', isEstate: true, loaded: false,
-    refresh: () => {}, categoryLabel: (k) => CATEGORY_INFO[k]?.label || 'Visitor', management: 'estate management',
+    site, terms: site.terms, modules: site.modules, type: site.type, isEstate, loaded: false,
+    refresh: () => {},
+    categoryLabel: (k) => (!k || k === 'guest' ? 'Visitor' : site.passCategories.find((c) => c.key === k)?.label || CATEGORY_INFO[k]?.label || k),
+    management: isEstate ? 'estate management' : 'management',
+    roles: site.roles, requestKinds: site.requestKinds,
   };
-})();
+};
 
-export const useSite = () => useContext(SiteContext) || FALLBACK;
+export const useSite = () => useContext(SiteContext) || fallbackValue();

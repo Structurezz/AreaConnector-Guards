@@ -50,7 +50,7 @@ export const TERMS = {
   },
   hospital: {
     site: 'Hospital', sites: 'Hospitals',
-    member: 'Patient / staff', members: 'Patients & staff',
+    member: 'Patient or staff member', members: 'Patients & staff',
     unit: 'Ward', units: 'Wards',
     family: 'Next of kin', familyPlural: 'Next of kin', household: 'Next of kin',
     manager: 'Administrator', dues: 'Bills',
@@ -60,12 +60,90 @@ export const TERMS = {
 
 const ALL_ON = { payments: true, marketplace: true, community: true, events: true, neighbours: true, household: true };
 export const DEFAULT_MODULES = {
-  estate:     { ...ALL_ON, gatelog: false, shifts: false, stays: false, visiting: false },
-  school:     { ...ALL_ON, marketplace: false, neighbours: false, gatelog: true, shifts: true, stays: false, visiting: false },
-  university: { ...ALL_ON, household: false, gatelog: true, shifts: true, stays: false, visiting: true },
-  hotel:      { ...ALL_ON, payments: false, marketplace: false, community: false, neighbours: false, gatelog: true, shifts: true, stays: true, visiting: false },
-  industrial: { ...ALL_ON, payments: false, marketplace: false, household: false, gatelog: true, shifts: true, stays: false, visiting: false },
-  hospital:   { ...ALL_ON, payments: false, marketplace: false, community: false, events: false, neighbours: false, gatelog: true, shifts: true, stays: false, visiting: true },
+  estate:     { ...ALL_ON, gatelog: false, shifts: false, stays: false, visiting: false, requests: false, rollcall: false },
+  school:     { ...ALL_ON, marketplace: false, neighbours: false, gatelog: true, shifts: true, stays: false, visiting: false, requests: true, rollcall: true },
+  university: { ...ALL_ON, household: false, gatelog: true, shifts: true, stays: false, visiting: true, requests: true, rollcall: true },
+  hotel:      { ...ALL_ON, payments: false, marketplace: false, community: false, neighbours: false, gatelog: true, shifts: true, stays: true, visiting: false, requests: true, rollcall: true },
+  industrial: { ...ALL_ON, payments: false, marketplace: false, household: false, gatelog: true, shifts: true, stays: false, visiting: false, requests: true, rollcall: true },
+  hospital:   { ...ALL_ON, payments: false, marketplace: false, community: false, events: false, neighbours: false, gatelog: true, shifts: true, stays: true, visiting: true, requests: true, rollcall: true },
+};
+
+// ── Roles inside a site (client copy of server/utils/siteRoles.js) ──
+// Everyone is auth role 'resident'; user.siteRole says what they are here.
+const R = (key, label, plural, extra = {}) => ({ key, label, plural, staff: false, responds: [], scoped: false, onCall: false, assignable: false, specialty: false, rollcall: false, ...extra });
+const ALL_ALERTS = ['medical', 'security', 'fire', 'other'];
+
+export const ROLES = {
+  estate: [R('resident', 'Resident', 'Residents')],
+  hospital: [
+    R('patient', 'Patient', 'Patients'),
+    R('doctor', 'Doctor', 'Doctors', { staff: true, responds: ['medical'], onCall: true, assignable: true, specialty: true }),
+    R('nurse', 'Nurse', 'Nurses', { staff: true, responds: ['medical'], scoped: true, onCall: true, assignable: true }),
+    R('staff', 'Hospital staff', 'Hospital staff', { staff: true, rollcall: true }),
+  ],
+  university: [
+    R('student', 'Student', 'Students'),
+    R('lecturer', 'Lecturer', 'Lecturers', { staff: true, assignable: true, specialty: true }),
+    R('warden', 'Hall warden / porter', 'Hall wardens & porters', { staff: true, responds: ALL_ALERTS, scoped: true, assignable: true, rollcall: true }),
+    R('clinic', 'Clinic staff', 'Clinic staff', { staff: true, responds: ['medical'], onCall: true }),
+    R('staff', 'University staff', 'University staff', { staff: true, rollcall: true }),
+  ],
+  school: [
+    R('student', 'Student', 'Students'),
+    R('teacher', 'Teacher', 'Teachers', { staff: true, responds: ['medical', 'security', 'other'], scoped: true, assignable: true, specialty: true, rollcall: true }),
+    R('nurse', 'School nurse', 'School nurses', { staff: true, responds: ['medical'], onCall: true }),
+    R('staff', 'School staff', 'School staff', { staff: true, rollcall: true }),
+  ],
+  hotel: [
+    R('guest', 'Guest', 'Guests'),
+    R('front_desk', 'Front desk', 'Front desk', { staff: true, responds: ['security', 'other'] }),
+    R('housekeeping', 'Housekeeping', 'Housekeeping', { staff: true }),
+    R('maintenance', 'Maintenance', 'Maintenance', { staff: true }),
+    R('duty_manager', 'Duty manager', 'Duty managers', { staff: true, responds: ALL_ALERTS, onCall: true, rollcall: true }),
+  ],
+  industrial: [
+    R('employee', 'Employee', 'Employees'),
+    R('supervisor', 'Supervisor', 'Supervisors', { staff: true, responds: ALL_ALERTS, scoped: true, assignable: true, rollcall: true }),
+    R('safety_officer', 'Safety officer', 'Safety officers', { staff: true, responds: ALL_ALERTS, onCall: true, rollcall: true }),
+    R('first_aider', 'First aider', 'First aiders', { staff: true, responds: ['medical'], onCall: true }),
+  ],
+};
+
+export const ASSIGN_LABEL = {
+  estate: '', hospital: 'Care team', university: 'Adviser & warden', school: 'Class teacher',
+  hotel: '', industrial: 'Supervisor',
+};
+
+export const REQUEST_KINDS = {
+  estate: [],
+  hospital: [
+    { key: 'call_nurse', label: 'Call a nurse',        roles: ['nurse'],  urgent: true },
+    { key: 'assistance', label: 'Help with something', roles: ['nurse'] },
+    { key: 'meal',       label: 'Food & drink',        roles: ['staff'] },
+    { key: 'other',      label: 'Something else',      roles: ['staff', 'nurse'] },
+  ],
+  university: [
+    { key: 'hostel_repair', label: 'Hostel repair',       roles: ['warden'] },
+    { key: 'clinic',        label: 'See the clinic',      roles: ['clinic'] },
+    { key: 'other',         label: 'Ask the hall office', roles: ['warden'] },
+  ],
+  school: [
+    { key: 'sick_bay', label: 'Sick bay',            roles: ['nurse'], urgent: true },
+    { key: 'teacher',  label: 'Message the teacher', roles: ['teacher'] },
+    { key: 'other',    label: 'School office',       roles: ['staff'] },
+  ],
+  hotel: [
+    { key: 'housekeeping', label: 'Housekeeping',   roles: ['housekeeping'] },
+    { key: 'maintenance',  label: 'Repairs',        roles: ['maintenance'] },
+    { key: 'room_service', label: 'Room service',   roles: ['front_desk'] },
+    { key: 'concierge',    label: 'Concierge',      roles: ['front_desk'] },
+    { key: 'other',        label: 'Something else', roles: ['front_desk', 'duty_manager'] },
+  ],
+  industrial: [
+    { key: 'incident',  label: 'Report an injury or incident', roles: ['supervisor', 'safety_officer', 'first_aider'], urgent: true },
+    { key: 'hazard',    label: 'Report a hazard',               roles: ['safety_officer', 'supervisor'] },
+    { key: 'equipment', label: 'Equipment fault',               roles: ['supervisor'] },
+  ],
 };
 
 export const CATEGORY_INFO = {
@@ -97,6 +175,16 @@ export const CATEGORY_STYLE = {
 
 export const normType = (t) => (TYPES.includes(t) ? t : 'estate');
 
+// The last site type this device saw — used before anything is loaded
+// (boot loader, login screen) so a hospital guard doesn't see "estate".
+export const LAST_TYPE_KEY = 'ac:lastSiteType';
+export const readLastSiteType = () => {
+  try { return normType(localStorage.getItem(LAST_TYPE_KEY)); } catch { return 'estate'; }
+};
+export const writeLastSiteType = (t) => {
+  try { if (TYPES.includes(t)) localStorage.setItem(LAST_TYPE_KEY, t); } catch { /* ignore */ }
+};
+
 // Config used before / without GET /api/site.
 export function fallbackSite(type) {
   const t = normType(type);
@@ -108,6 +196,10 @@ export function fallbackSite(type) {
     relationships: null,
     inductionText: '',
     visitingHours: { start: '10:00', end: '20:00', maxPerPatient: 0 },
+    roles: ROLES[t],
+    defaultRole: ROLES[t][0].key,
+    assignLabel: ASSIGN_LABEL[t] || '',
+    requestKinds: REQUEST_KINDS[t] || [],
   };
 }
 

@@ -92,6 +92,8 @@ export const alertAPI = {
   acknowledge: (id) => api.patch(`/alerts/${id}/acknowledge`),
   resolve: (id) => api.patch(`/alerts/${id}/resolve`),
   broadcast: (data) => api.post('/alerts/broadcast', data),
+  // Sites with roles: 'on_my_way' | 'arrived' | 'cannot'
+  respond: (id, status) => api.post(`/alerts/${id}/respond`, { status }),
 };
 
 // Calls (staff receive free emergency calls from residents and can call back)
@@ -117,6 +119,14 @@ export const siteAPI = {
   get: () => api.get('/site'),
   staffCheck: (q) => api.get('/site/staff-check', { params: { q } }),
   places: () => api.get('/site/places'),
+};
+
+// Emergency roll-call (module rollcall)
+export const rollCallAPI = {
+  active: () => api.get('/site/rollcall/active'),
+  start: (reason) => api.post('/site/rollcall', { reason }),
+  respond: (id, status, note) => api.post(`/site/rollcall/${id}/respond`, { status, note }),
+  end: (id) => api.post(`/site/rollcall/${id}/end`),
 };
 
 // Deliveries & vehicles logged at the gate (module gatelog)

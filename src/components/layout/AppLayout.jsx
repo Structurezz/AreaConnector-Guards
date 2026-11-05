@@ -12,6 +12,8 @@ import { isStatusUpdate, isIncomingAlert } from '../../utils/alertEvents';
 import CallButton from '../calls/CallButton';
 import LiveLocations from '../safety/LiveLocations';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
+import Responders, { EscalatedBadge } from '../alerts/Responders';
+import { RollCallProvider, RollCallBanner } from '../rollcall/RollCall';
 
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
@@ -87,6 +89,13 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
             </div>
           </div>
 
+          {!isEstate && !isBroadcast && (alert.escalatedAt || alert.responders?.length || alert.status === 'open') && (
+            <div className="space-y-2">
+              {alert.escalatedAt && <EscalatedBadge alert={alert} />}
+              <Responders alert={alert} />
+            </div>
+          )}
+
           {alert.note && <p className="text-[14px] text-slate-700 leading-relaxed bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100">“{alert.note}”</p>}
 
           {(alert.location || alert.actionRequired) && (
@@ -109,9 +118,11 @@ function AlertPopup({ alert, queueCount, onDismiss, onClose, muted, onToggleMute
             <Shield size={18} />
             {alert.isEmergencyBroadcast
               ? (queueCount > 1 ? `Got it — next (${queueCount - 1} left)` : 'Got it')
-              : (queueCount > 1 ? `I'm on it — next (${queueCount - 1} left)` : "Acknowledge — I'm on it")}
+              : !isEstate
+                ? (queueCount > 1 ? `On my way — next (${queueCount - 1} left)` : 'On my way')
+                : (queueCount > 1 ? `I'm on it — next (${queueCount - 1} left)` : "Acknowledge — I'm on it")}
           </button>
-          {!isBroadcast && <p className="text-center text-[11.5px] text-slate-400">The person who raised it is told help is on the way.</p>}
+          {!isBroadcast && <p className="text-center text-[11.5px] text-slate-400">{isEstate ? 'The person who raised it is told help is on the way.' : 'The person who raised it and the team are told you are on the way.'}</p>}
         </div>
       </div>
     </div>
@@ -129,15 +140,24 @@ export default function AppLayout({ children }) {
   const myId = user?._id ? String(user._id) : null;
   const navigate = useNavigate();
   const mutedRef = useRef(false);
+  const { isEstate } = useSite();
+  const isEstateRef = useRef(isEstate);
 
   mutedRef.current = muted;
+  isEstateRef.current = isEstate;
 
   const handleDismiss = useCallback((acknowledge = true) => {
     setQueue((q) => {
       const current = q[0];
       // A guard acknowledging a resident/staff alert tells the raiser help is
       // coming. Broadcasts are informational — nothing to acknowledge.
-      if (acknowledge && current?._id && !current.isEmergencyBroadcast && current.status === 'open') {
+      if (acknowledge && current?._id && !current.isEmergencyBroadcast && !isEstateRef.current) {
+        // Sites with roles: join the responders ("Guard (Security) · On my way")
+        alertAPI.respond(current._id, 'on_my_way').catch((err) => {
+          if (err.response?.status === 404 && current.status === 'open') alertAPI.acknowledge(current._id).catch(() => {});
+          else toast.error(err.response?.data?.message || 'Could not respond — try from Alerts');
+        });
+      } else if (acknowledge && current?._id && !current.isEmergencyBroadcast && current.status === 'open') {
         alertAPI.acknowledge(current._id).catch(() => toast.error('Could not acknowledge — try from Alerts'));
       }
       const remaining = q.slice(1);
@@ -189,7 +209,7 @@ export default function AppLayout({ children }) {
   const current = queue[0] || null;
   const { connected } = useSocket() || {};
   const { pathname } = useLocation();
-  const page = NAV.find((n) => (n.to === '/verify' ? pathname === '/verify' || pathname === '/' : pathname.startsWith(n.to))) || NAV[0];
+  const page = pathname.startsWith('/rollcall') ? { label: 'Roll-call' } : (NAV.find((n) => (n.to === '/verify' ? pathname === '/verify' || pathname === '/' : pathname.startsWith(n.to))) || NAV[0]);
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 30000); return () => clearInterval(t); }, []);
   const { terms } = useSite();
@@ -207,6 +227,7 @@ export default function AppLayout({ children }) {
   ).filter(Boolean);
 
   return (
+    <RollCallProvider>
     <div className="flex h-screen bg-[#F4F6F8] overflow-hidden">
       {current && (
         <AlertPopup alert={current} queueCount={queue.length} onDismiss={() => handleDismiss(true)} onClose={() => handleDismiss(false)} muted={muted} onToggleMute={handleToggleMute} />
@@ -277,6 +298,7 @@ export default function AppLayout({ children }) {
 
         <main className="flex-1 overflow-y-auto p-4 pb-28 md:p-6 lg:p-8 lg:pb-8">
           <CallAlertsPrompt appName="AC Guards" />
+          <RollCallBanner />
           {children}
         </main>
         <LiveLocations />
@@ -313,5 +335,6 @@ export default function AppLayout({ children }) {
         </div>
       </nav>
     </div>
+    </RollCallProvider>
   );
 }

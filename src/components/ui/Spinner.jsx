@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSite } from '../../context/SiteContext';
 
 // Branded loading: the app logo breathing inside a progress ring, with phrases
 // that describe what's loading on the current page.
@@ -66,10 +67,32 @@ const PAGE_PHRASES = [
 
 const BOOT_PHRASES = ["Signing you in", "Getting the gate ready", "Almost there"];
 
-function phrasesForPath() {
+// Schools, hospitals, hotels…: the same phrases in the site's own words.
+// Estates keep the phrases above word for word. `site` is the loaded site
+// (or the last type this device saw — see SiteContext).
+function sitePhrases(terms) {
+  const site = (terms.site || 'site').toLowerCase();
+  const members = (terms.members || 'people').toLowerCase();
+  return [
+    ['/verify', ['Getting the scanner ready', `Checking ${site} visitor passes`]],
+    ['/log', [`Loading the ${site} gate log`, 'Fetching today’s entries']],
+    ['/alerts', ['Loading alerts', `Checking ${site} alerts`]],
+    ['/calls', ['Loading calls', `Connecting you to ${members}`]],
+    ['/staff', [`Loading ${(terms.idCheck || 'staff check').toLowerCase()}`]],
+    ['/deliveries', ['Loading deliveries', 'Fetching vehicles on site']],
+    ['/places', [`Loading ${site} places`]],
+    ['/rollcall', ['Loading the roll-call', 'Counting who is safe']],
+    ['/settings', ['Loading settings']],
+    ['/', [`Getting the ${site} gate ready`, 'Loading expected visitors']],
+  ];
+}
+const siteBoot = (terms) => ['Signing you in', `Getting the ${(terms.site || 'site').toLowerCase()} gate ready`, 'Almost there'];
+
+function phrasesForPath(isEstate, terms) {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const hit = PAGE_PHRASES.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || (prefix !== '/' && path.startsWith(prefix)));
-  return hit ? hit[1] : BRAND.fallback;
+  const table = isEstate ? PAGE_PHRASES : sitePhrases(terms);
+  const hit = table.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || (prefix !== '/' && path.startsWith(prefix)));
+  return hit ? hit[1] : (isEstate ? BRAND.fallback : [`Getting the ${(terms.site || 'site').toLowerCase()} gate ready`, 'Loading']);
 }
 
 const CSS = `
@@ -94,14 +117,15 @@ function Logo({ size }) {
 }
 
 export function LogoLoader({ size = 56, phrases, showPhrase = true, className = '', style }) {
-  const [auto] = useState(phrasesForPath);
+  const { isEstate, terms } = useSite();
+  const auto = phrasesForPath(isEstate, terms);
   const list = phrases || auto;
   const [i, setI] = useState(0);
   useEffect(() => {
     if (!showPhrase || list.length < 2) return undefined;
     const t = setInterval(() => setI((x) => (x + 1) % list.length), 1900);
     return () => clearInterval(t);
-  }, [list, showPhrase]);
+  }, [list.join('|'), showPhrase]); // eslint-disable-line react-hooks/exhaustive-deps
   const ring = size + 36;
   const r = ring / 2 - 2.5;
   const c = 2 * Math.PI * r;
@@ -150,9 +174,10 @@ export default function Spinner({ size = 24, className = '' }) {
 }
 
 export function LoadingScreen() {
+  const { isEstate, terms } = useSite();
   return (
     <div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <LogoLoader size={72} phrases={BOOT_PHRASES} />
+      <LogoLoader size={72} phrases={isEstate ? BOOT_PHRASES : siteBoot(terms)} />
       <div style={{ marginTop: 18, textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#0F172A', lineHeight: 1 }}>
           {BRAND.name[0]}<span style={{ color: BRAND.color }}>{BRAND.name[1]}</span>

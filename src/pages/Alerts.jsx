@@ -3,7 +3,7 @@ import { alertAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
 import {
   ShieldAlert, Flame, HeartPulse, Volume2, CircleHelp, Megaphone, Check, CheckCircle2, Phone, MapPin, Home, Clock,
-  ChevronLeft, ChevronRight, X, Users, Briefcase, UserCog, Shield, AlertTriangle, AlertOctagon, Info, Send, Radio,
+  ChevronLeft, ChevronRight, X, Users, Briefcase, UserCog, Shield, AlertTriangle, AlertOctagon, Info, Send, Radio, Footprints,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -15,6 +15,7 @@ import Portal from '../components/ui/Portal';
 import { upsertAlert } from '../utils/alertEvents';
 import CallButton from '../components/calls/CallButton';
 import { useSite } from '../context/SiteContext';
+import Responders, { EscalatedBadge, myResponse } from '../components/alerts/Responders';
 
 const PAGE_SIZE = 15;
 
@@ -59,8 +60,12 @@ function siteWho(terms, isEstate) {
 }
 
 /* ── One alert: what, who, where — then Respond → Resolve ─────────── */
-function AlertCard({ a, onAck, onResolve, busy }) {
+function AlertCard({ a, onAck, onRespond, onResolve, busy }) {
   const { terms, isEstate } = useSite();
+  const { user } = useAuth();
+  // Sites with roles: show who is responding, and let the guard say "On my way" / "Arrived"
+  const withRoles = !isEstate;
+  const mine = withRoles ? myResponse(a, user?._id) : null;
   const W = siteWho(terms, isEstate);
   const k = KIND[a.type] || KIND.other;
   const open = a.status === 'open';
@@ -85,7 +90,8 @@ function AlertCard({ a, onAck, onResolve, busy }) {
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-[16px] font-semibold text-slate-900">{a.isEmergencyBroadcast ? `${terms.site} broadcast` : k.word}</p>
               {open && !a.isEmergencyBroadcast && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />Needs response</span>}
-              {!open && !a.isEmergencyBroadcast && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Guard on the way</span>}
+              {!open && !a.isEmergencyBroadcast && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{withRoles ? 'Help on the way' : 'Guard on the way'}</span>}
+              {withRoles && !a.isEmergencyBroadcast && <EscalatedBadge alert={a} />}
               {lvl && a.severity !== 'medium' && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${lvl.color}12`, color: lvl.color }}>{lvl.word}</span>}
             </div>
             <p className="text-[12.5px] text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} />{ago(a.createdAt)}</p>
@@ -130,6 +136,8 @@ function AlertCard({ a, onAck, onResolve, busy }) {
           )}
         </div>
 
+        {withRoles && !a.isEmergencyBroadcast && <div className="mt-3"><Responders alert={a} /></div>}
+
         {/* Steps */}
         {a.isEmergencyBroadcast ? (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -137,6 +145,25 @@ function AlertCard({ a, onAck, onResolve, busy }) {
               <CheckCircle2 size={17} /> Mark as over
             </button>
             {phone && <a href={`tel:${phone}`} className="h-12 px-4 rounded-xl border border-slate-200 flex items-center gap-2 text-[14px] font-semibold text-slate-800 hover:bg-slate-50" style={{ textDecoration: 'none' }}><Phone size={16} className="text-blue-600" /> Call</a>}
+          </div>
+        ) : withRoles ? (
+          <div className="mt-4 rounded-2xl border border-slate-200 p-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { st: 'on_my_way', word: 'On my way', done: !!mine && mine.status !== 'cannot', Icon: Footprints, on: 'bg-red-600 hover:bg-red-700' },
+                { st: 'arrived', word: 'Arrived', done: mine?.status === 'arrived', Icon: Check, on: 'bg-amber-600 hover:bg-amber-700' },
+              ].map((b) => (
+                <button key={b.st} disabled={busy || b.done} onClick={() => onRespond(a._id, b.st)}
+                  className={`h-12 rounded-xl text-[14px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${b.done ? 'bg-emerald-50 text-emerald-700' : `text-white ${b.on}`}`}>
+                  {b.done ? <CheckCircle2 size={16} /> : <b.Icon size={16} />} {b.word}
+                </button>
+              ))}
+              <button disabled={busy || open} onClick={() => onResolve(a._id)}
+                className={`h-12 rounded-xl text-[14px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${!open ? 'text-white bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-50 text-slate-400'}`}>
+                <CheckCircle2 size={16} /> Resolve
+              </button>
+            </div>
+            <p className="px-2 pt-1.5 pb-0.5 text-[11.5px] text-slate-500 text-center">{open ? `On my way lets ${who.split(' ')[0]} and the team know you're coming.` : 'Mark resolved once it is safe.'}</p>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-slate-200 p-1.5">
@@ -346,6 +373,20 @@ export default function SecurityAlerts() {
       toast.success('Responding — they have been told');
     } catch { playSound('error'); toast.error('Did not work. Try again.'); } finally { setBusy(null); }
   };
+  // Sites with roles: join the responders ("On my way" / "Arrived")
+  const handleRespond = async (id, status) => {
+    setBusy(id);
+    try {
+      const { data } = await alertAPI.respond(id, status);
+      playSound('click');
+      if (data?.data) setAlerts((prev) => upsertAlert(prev, data.data));
+      toast.success(data?.message || (status === 'arrived' ? 'Marked as arrived' : "They've been told you're on your way"));
+    } catch (err) {
+      // Older server without /respond — fall back to a plain acknowledge
+      if (err.response?.status === 404 && status === 'on_my_way') return handleAck(id);
+      playSound('error'); toast.error(err.response?.data?.message || 'Did not work. Try again.');
+    } finally { setBusy(null); }
+  };
   const handleResolve = async (id) => {
     setBusy(id);
     try {
@@ -386,7 +427,7 @@ export default function SecurityAlerts() {
 
       {loading ? <Spinner size={30} /> : (
         <div className="space-y-4">
-          {ordered.map((a) => <AlertCard key={a._id} a={a} onAck={handleAck} onResolve={handleResolve} busy={busy === a._id} />)}
+          {ordered.map((a) => <AlertCard key={a._id} a={a} onAck={handleAck} onRespond={handleRespond} onResolve={handleResolve} busy={busy === a._id} />)}
           {pagination.pages > 1 && <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />}
         </div>
       )}

@@ -20,6 +20,7 @@ import SecuritySettings from './pages/Settings';
 import Deliveries from './pages/Deliveries';
 import StaffCheck from './pages/StaffCheck';
 import Places from './pages/Places';
+import RollCall from './pages/RollCall';
 
 function RequireSecurity({ children }) {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ function AppRoutes() {
       <Route path="/calls" element={<RequireSecurity><Calls /></RequireSecurity>} />
       <Route path="/deliveries" element={<RequireSecurity><RequireModule module="gatelog"><Deliveries /></RequireModule></RequireSecurity>} />
       <Route path="/staff" element={<RequireSecurity><RequireModule module="shifts"><StaffCheck /></RequireModule></RequireSecurity>} />
+      <Route path="/rollcall" element={<RequireSecurity><RequireModule module="rollcall"><RollCall /></RequireModule></RequireSecurity>} />
       <Route path="/places" element={<RequireSecurity><Places /></RequireSecurity>} />
       <Route path="/settings" element={<RequireSecurity><SecuritySettings /></RequireSecurity>} />
       <Route path="/" element={<Navigate to="/verify" replace />} />

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { QrCode, ClipboardList, Siren, LogOut, Settings as SettingsIcon, PhoneCall, Clock, Truck, BadgeCheck, MapPin } from 'lucide-react';
+import { QrCode, ClipboardList, Siren, LogOut, Settings as SettingsIcon, PhoneCall, Clock, Truck, BadgeCheck, MapPin, Siren as SirenIcon, ChevronRight } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
+import { useRollCall } from '../rollcall/RollCall';
 
 export const NAV = [
   { to: '/verify',   icon: QrCode,        label: 'Gate',       hint: 'Verify visitors' },
@@ -67,6 +68,7 @@ export default function Sidebar({ mobile = false, onClose, alertCount = 0 }) {
   const shift = useShift();
   const { terms } = useSite();
   const nav = useNav();
+  const rollCall = useRollCall();
   const estateName = user?.estateId && typeof user.estateId === 'object' ? user.estateId.name : `Your ${terms.site.toLowerCase()}`;
 
   return (
@@ -120,6 +122,32 @@ export default function Sidebar({ mobile = false, onClose, alertCount = 0 }) {
             )}
           </NavLink>
         ))}
+
+        {/* Emergency roll-call (never on estates) */}
+        {rollCall.enabled && (
+          <div className="pt-2 mt-2 border-t border-white/[0.06]">
+            {rollCall.active ? (
+              <button onClick={() => { onClose?.(); navigate('/rollcall'); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-left">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white text-red-600 g-alarm"><SirenIcon size={17} /></span>
+                <span className="flex-1 min-w-0 leading-tight">
+                  <span className="block text-[13.5px] font-bold text-white">Roll-call running</span>
+                  <span className="block text-[11px] text-red-100 truncate">{rollCall.active.safe} safe · {rollCall.active.missing} missing</span>
+                </span>
+                <ChevronRight size={16} className="text-white/80" />
+              </button>
+            ) : (
+              <button onClick={() => { onClose?.(); rollCall.openStart(); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-left">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-600 text-white"><SirenIcon size={17} /></span>
+                <span className="flex-1 min-w-0 leading-tight">
+                  <span className="block text-[13.5px] font-bold text-red-200">Start roll-call</span>
+                  <span className="block text-[11px] text-white/40 truncate">Evacuation — who is safe?</span>
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Guard */}

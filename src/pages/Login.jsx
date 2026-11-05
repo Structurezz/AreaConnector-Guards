@@ -7,8 +7,16 @@ import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import Portal from '../components/ui/Portal';
 import { GuardMark } from '../components/layout/Sidebar';
+import { useSite } from '../context/SiteContext';
+
+// "estate manager" for estates; the site's own word elsewhere (Administrator, Front desk…)
+const useManagerWord = () => {
+  const { isEstate, terms } = useSite();
+  return isEstate ? 'estate manager' : (terms.manager || 'manager').toLowerCase();
+};
 
 function ForgotPasswordModal({ initialEmail = '', onClose }) {
+  const mgr = useManagerWord();
   const [email, setEmail] = useState(initialEmail);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -37,7 +45,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
             </div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', margin: '0 0 6px' }}>Request sent</h2>
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: '0 0 20px' }}>
-              If an account exists for <strong>{email}</strong>, your estate manager has been notified. You'll receive a temporary password by email once they approve.
+              If an account exists for <strong>{email}</strong>, your {mgr} has been notified. You'll receive a temporary password by email once they approve.
             </p>
             <button onClick={onClose}
               style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
@@ -51,9 +59,9 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
                 <KeyRound size={24}/>
               </div>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 2 }}>Password help</div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.25, color: '#fff' }}>Ask your estate manager to reset it</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.25, color: '#fff' }}>Ask your {mgr} to reset it</h2>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '8px 0 0', lineHeight: 1.5 }}>
-                Enter your account email — your estate manager will approve a reset and we'll email you a temporary password.
+                Enter your account email — your {mgr} will approve a reset and we'll email you a temporary password.
               </p>
             </div>
             <form onSubmit={submit} style={{ padding: '20px 28px 28px' }}>
@@ -67,7 +75,7 @@ function ForgotPasswordModal({ initialEmail = '', onClose }) {
                 {submitting ? 'Sending request…' : 'Request password reset'}
               </button>
               <p style={{ fontSize: 11, color: '#94A3B8', margin: '12px 0 0', textAlign: 'center', lineHeight: 1.55 }}>
-                Your estate manager must approve the reset — this prevents stranger-driven password resets.
+                Your {mgr} must approve the reset — this prevents stranger-driven password resets.
               </p>
             </form>
           </>
@@ -122,6 +130,15 @@ const SAMPLE_ACTIVITY = [
 ];
 const AGO = ['now', '2m', '5m'];
 
+// Sample feed in the site's words (estates keep the original text)
+function useSampleActivity() {
+  const { isEstate, terms } = useSite();
+  if (isEstate) return SAMPLE_ACTIVITY;
+  const unit = terms.unit || 'Unit';
+  const block = terms.block || 'Block';
+  return SAMPLE_ACTIVITY.map((e) => ({ ...e, meta: e.meta.replace(/\bUnit\b/g, unit).replace(/\bBlock\b/g, block).replace('Noise report', 'Report') }));
+}
+
 function useTicker(ms = 2500) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), ms); return () => clearInterval(t); }, [ms]);
@@ -158,8 +175,9 @@ function LiveDot() {
 
 function GateActivityCard() {
   const tick = useTicker(2500);
-  const n = SAMPLE_ACTIVITY.length;
-  const rows = [0, 1, 2].map((k) => ({ key: tick - k, ev: SAMPLE_ACTIVITY[((tick - k) % n + n) % n], ago: AGO[k], fresh: k === 0 }));
+  const sample = useSampleActivity();
+  const n = sample.length;
+  const rows = [0, 1, 2].map((k) => ({ key: tick - k, ev: sample[((tick - k) % n + n) % n], ago: AGO[k], fresh: k === 0 }));
   return (
     <div style={{ width: '100%', maxWidth: 420, borderRadius: 20, padding: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', boxShadow: '0 30px 60px -30px rgba(0,0,0,0.6)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px 10px' }}>
@@ -186,7 +204,8 @@ function GateActivityCard() {
 
 function MobileTicker() {
   const tick = useTicker(2500);
-  const ev = SAMPLE_ACTIVITY[tick % SAMPLE_ACTIVITY.length];
+  const sample = useSampleActivity();
+  const ev = sample[tick % sample.length];
   const Icon = ev.icon;
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, maxWidth: '100%', padding: '7px 12px 7px 10px', borderRadius: 99, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -209,6 +228,7 @@ function Wordmark({ size = 16 }) {
 }
 
 function BrandPanel() {
+  const { isEstate, terms } = useSite();
   return (
     <div className="relative overflow-hidden lg:w-[52%] lg:min-h-screen flex flex-col px-5 pt-8 pb-12 lg:px-14 lg:py-12" style={{ background: '#07111F' }}>
       {/* glow + grid */}
@@ -231,7 +251,7 @@ function BrandPanel() {
           Every gate, calm<br className="hidden lg:block" /> and <span style={{ color: '#60A5FA' }}>in control.</span>
         </h2>
         <p className="text-[13px] lg:text-[15px]" style={{ color: 'rgba(226,232,240,0.6)', lineHeight: 1.6, margin: '12px 0 0', maxWidth: 440 }}>
-          Verify visitors in seconds, log every entry and respond to estate alerts the moment they happen.
+          Verify visitors in seconds, log every entry and respond to {isEstate ? 'estate alerts' : `${terms.site.toLowerCase()} alerts`} the moment they happen.
         </p>
 
         <div className="mt-5 lg:hidden"><MobileTicker /></div>
@@ -241,7 +261,7 @@ function BrandPanel() {
       {/* Footer */}
       <div className="relative hidden lg:flex items-center justify-between" style={{ fontSize: 11, color: 'rgba(226,232,240,0.35)' }}>
         <span>Powered by <span style={{ fontWeight: 600, color: 'rgba(226,232,240,0.55)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864</span>
-        <span>Secure Estate Technology</span>
+        <span>{isEstate ? 'Secure Estate Technology' : `Secure ${terms.site} Technology`}</span>
       </div>
     </div>
   );

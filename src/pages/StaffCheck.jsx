@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { Search, X, BadgeCheck, Clock, Home, Contact, Briefcase, Phone, BedDouble, UserX, AlertTriangle, GraduationCap } from 'lucide-react';
+import { Search, X, BadgeCheck, Clock, Home, Contact, Briefcase, Phone, BedDouble, UserX, AlertTriangle, GraduationCap, Radio } from 'lucide-react';
 import { siteAPI } from '../api';
 import { useSite } from '../context/SiteContext';
 import { playSound } from '../utils/sounds';
@@ -50,6 +50,27 @@ function ShiftChip({ shift }) {
   );
 }
 
+// Who they are on the site: "Doctor · Cardiology", "Nurse", "Supervisor"…
+// plus an On call pill. Non-estate sites only.
+function RoleChip({ p }) {
+  const text = [p.roleLabel, p.specialty].filter(Boolean).join(' · ');
+  const staff = !!p.staff;
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[14px] font-extrabold"
+        style={staff ? { background: '#1E3A8A', color: '#fff', border: '2px solid #1E3A8A' } : { background: '#F1F5F9', color: '#0F172A', border: '2px solid #CBD5E1' }}>
+        {staff ? <Briefcase size={15} /> : <Contact size={15} />} {text}
+      </span>
+      {p.onCall && (
+        <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-extrabold tracking-wide"
+          style={{ background: '#047857', color: '#fff', border: '2px solid #047857' }}>
+          <Radio size={14} /> ON CALL
+        </span>
+      )}
+    </div>
+  );
+}
+
 const STAY = {
   in_house:    { label: 'IN HOUSE',    bg: '#ECFDF5', fg: '#047857', border: '#6EE7B7' },
   upcoming:    { label: 'UPCOMING',    bg: '#EFF6FF', fg: '#1D4ED8', border: '#93C5FD' },
@@ -74,7 +95,7 @@ function StayChip({ stay }) {
   );
 }
 
-function PersonCard({ p, terms, university }) {
+function PersonCard({ p, terms, university, showRole }) {
   const mp = p.memberProfile || {};
   const initial = (p.name || '?')[0]?.toUpperCase();
   return (
@@ -89,6 +110,7 @@ function PersonCard({ p, terms, university }) {
           {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 mt-0.5 text-[12.5px] hover:text-blue-600" style={{ color: '#64748B' }}><Phone size={12} /> {p.phone}</a>}
         </div>
       </div>
+      {showRole && p.roleLabel && <div className="px-4 pb-3 -mt-1"><RoleChip p={p} /></div>}
       {(mp.idNumber || mp.className || p.unit) && (
         <div className="px-4 pb-3 grid grid-cols-2 gap-2">
           {mp.idNumber && (
@@ -208,7 +230,7 @@ export default function StaffCheck() {
       )}
       {!loading && results && results.length > 0 && (
         <div className="space-y-3">
-          {results.map((p) => <PersonCard key={p._id} p={p} terms={terms} university={university} />)}
+          {results.map((p) => <PersonCard key={p._id} p={p} terms={terms} university={university} showRole={!isEstate} />)}
         </div>
       )}
       {!results && !loading && (
