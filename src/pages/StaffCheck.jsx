@@ -142,7 +142,7 @@ function PersonCard({ p, terms, university, showRole }) {
         {p.stay && <StayChip stay={p.stay} />}
         {p.shift ? <ShiftChip shift={p.shift} />
           : p.stay ? null
-          : university ? <MemberChip label={terms.member} />
+          : university ? <MemberChip label={p.staff ? (p.roleLabel || 'Staff') : terms.member} />
           : <ShiftChip shift={null} />}
       </div>
     </div>
