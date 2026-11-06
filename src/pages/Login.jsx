@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api';
-import { Eye, EyeOff, AlertCircle, KeyRound, Mail, ShieldCheck, X, UserCheck, Package, Siren, LogOut, Car, Lock } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowRight, KeyRound, Mail, ShieldCheck, X, UserCheck, Package, Siren, LogOut, Car, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playSound } from '../utils/sounds';
 import Portal from '../components/ui/Portal';
@@ -117,6 +117,21 @@ export const AUTH_CSS = `
   @keyframes gaPing { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.6); opacity: 0; } }
   .ga-rise { animation: gaRise .6s cubic-bezier(.22,1,.36,1) both; }
   .ga-in { animation: gaIn .45s cubic-bezier(.22,1,.36,1) both; }
+  .ga-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #0F172A; margin: 0; }
+  .ga-sub { font-size: 14px; color: #475569; margin: 4px 0 0; }
+  .ga-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+    background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E3A8A; }
+  /* Phone ("clean light"): bigger type and touch targets, 16px inputs so iOS doesn't zoom */
+  @media (max-width: 1023.98px) {
+    .ga-page { min-height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    .ga-input { height: 52px; padding: 0 16px; border-radius: 14px; border-width: 1.5px; font-size: 16px; -webkit-appearance: none; appearance: none; }
+    .ga-label { font-size: 13.5px; margin-bottom: 7px; }
+    .ga-btn { height: 52px; font-size: 16px; }
+    .ga-title { font-size: 27px; letter-spacing: -0.025em; line-height: 1.15; }
+    .ga-sub { font-size: 15px; line-height: 1.5; margin-top: 6px; }
+    .ga-eyebrow { display: none; }
+  }
 `;
 
 // Sample data only — illustrates the live gate feed on the sign-in screen.
@@ -230,7 +245,7 @@ function Wordmark({ size = 16 }) {
 function BrandPanel() {
   const { isEstate, terms } = useSite();
   return (
-    <div className="relative overflow-hidden lg:w-[52%] lg:min-h-screen flex flex-col px-5 pt-8 pb-12 lg:px-14 lg:py-12" style={{ background: '#07111F' }}>
+    <div className="relative overflow-hidden lg:w-[52%] lg:min-h-screen hidden lg:flex flex-col px-5 pt-8 pb-12 lg:px-14 lg:py-12" style={{ background: '#07111F' }}>
       {/* glow + grid */}
       <div aria-hidden style={{ position: 'absolute', top: '-25%', left: '-20%', width: '80%', paddingBottom: '80%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.32) 0%, transparent 62%)', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', bottom: '-30%', right: '-25%', width: '70%', paddingBottom: '70%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -267,16 +282,49 @@ function BrandPanel() {
   );
 }
 
+// Phone: thin brand strip + soft glow at the very top (decorative)
+function MobileDecor() {
+  return (
+    <div aria-hidden className="lg:hidden absolute inset-x-0 top-0 h-[240px] overflow-hidden pointer-events-none">
+      <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg,#93C5FD,#3B82F6 45%,#1D4ED8 75%,#10B981)' }}/>
+      <div className="absolute" style={{ top: -140, right: -90, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,.20) 0%, rgba(59,130,246,0) 70%)' }}/>
+      <div className="absolute" style={{ top: -110, left: -120, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,.08) 0%, rgba(16,185,129,0) 70%)' }}/>
+    </div>
+  );
+}
+
+// Phone: small mark + name above the heading
+function MobileBrand() {
+  return (
+    <div className="lg:hidden flex items-center gap-2.5 self-start">
+      <GuardMark size={32} />
+      <div style={{ lineHeight: 1.15 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', color: '#0F172A' }}>
+          Area<span style={{ color: '#2563EB' }}>Connect</span><span style={{ color: '#64748B', fontWeight: 500 }}> Guard</span>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}>Security portal</div>
+      </div>
+    </div>
+  );
+}
+
+// Phones: brand + form vertically centred (the page grows and scrolls when
+// taller than the screen). Desktop: brand panel left, form right — unchanged.
 export function AuthShell({ children }) {
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: '#07111F' }}>
+    <div className="ga-page relative min-h-[100dvh] lg:min-h-screen flex flex-col lg:flex-row bg-white lg:bg-[#07111F]"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <style>{AUTH_CSS}</style>
+      <MobileDecor />
       <BrandPanel />
-      <div className="relative z-[1] flex-1 bg-white -mt-6 lg:mt-0 rounded-t-[28px] lg:rounded-none px-5 pt-8 pb-10 sm:px-8 lg:px-12 lg:py-12 lg:flex lg:items-center lg:justify-center lg:overflow-y-auto"
-        style={{ boxShadow: '0 -12px 30px -18px rgba(0,0,0,0.5)' }}>
-        <div className="w-full max-w-[400px] mx-auto ga-rise" style={{ animationDelay: '80ms' }}>
-          {children}
-          <p className="lg:hidden" style={{ textAlign: 'center', marginTop: 28, fontSize: 11, color: '#94A3B8', letterSpacing: '0.02em' }}>
+      <div className="relative z-[1] flex-1 flex flex-col bg-transparent lg:bg-white px-5 pt-5 pb-6 sm:px-8 lg:flex-row lg:px-12 lg:py-12 lg:items-center lg:justify-center lg:overflow-y-auto lg:shadow-[0_-12px_30px_-18px_rgba(0,0,0,0.5)]">
+        {/* Phone: logo stays top-left; only the form is centred below it */}
+        <MobileBrand />
+        <div className="flex-1 flex flex-col lg:flex-initial lg:block w-full max-w-[400px] mx-auto ga-rise" style={{ animationDelay: '80ms' }}>
+          <div className="flex-1 flex flex-col justify-center py-8 lg:block lg:py-0">
+            {children}
+          </div>
+          <p className="lg:hidden" style={{ textAlign: 'center', marginTop: 32, fontSize: 11, color: '#94A3B8', letterSpacing: '0.02em' }}>
             Powered by <span style={{ fontWeight: 600, color: '#64748B' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
           </p>
         </div>
@@ -308,6 +356,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
+  const { isEstate, terms } = useSite();
+  const codeWord = isEstate ? 'estate' : (terms.site || 'site').toLowerCase();
   const { login }  = useAuth();
   const navigate   = useNavigate();
 
@@ -348,9 +398,9 @@ export default function Login() {
 
       <AuthShell>
         <div style={{ marginBottom: 24 }}>
-          <div className="g-label" style={{ color: '#2563EB', marginBottom: 6 }}>Guard sign in</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#0F172A', margin: 0 }}>Welcome back</h1>
-          <p style={{ fontSize: 14, color: '#475569', margin: '4px 0 0' }}>Sign in to the gate system</p>
+          <div className="g-label ga-eyebrow" style={{ color: '#2563EB', marginBottom: 6 }}>Guard sign in</div>
+          <h1 className="ga-title">Welcome back</h1>
+          <p className="ga-sub">Sign in to the gate system</p>
         </div>
 
         {error && <AuthError>{error}</AuthError>}
@@ -358,15 +408,15 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 14 }}>
             <label className="ga-label" htmlFor="login-email">Email address</label>
-            <input id="login-email" type="email" className="ga-input" placeholder="you@example.com"
+            <input id="login-email" type="email" inputMode="email" className="ga-input" placeholder="you@example.com"
               value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              required autoComplete="email"/>
+              required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
           </div>
 
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
               <label className="ga-label" htmlFor="login-password">Password</label>
-              <button type="button" onClick={openForgot}
+              <button type="button" onClick={openForgot} className="hidden lg:inline"
                 style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
                 Forgot password?
               </button>
@@ -380,15 +430,26 @@ export default function Login() {
                 {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
             </div>
+            {/* Phone: forgot link sits under the field */}
+            <div className="lg:hidden" style={{ textAlign: 'right', marginTop: 10 }}>
+              <button type="button" onClick={openForgot}
+                style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '4px 0' }}>
+                Forgot password?
+              </button>
+            </div>
           </div>
 
           <button type="submit" disabled={loading} className="ga-btn" style={{ marginTop: 20 }}>
-            {loading ? (<><Spinner /> Signing in…</>) : 'Sign in'}
+            {loading ? (<><Spinner /> Signing in…</>) : (<>Sign in <ArrowRight size={18} className="lg:hidden" /></>)}
           </button>
 
-          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748B' }}>
+          <p className="hidden lg:block" style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748B' }}>
             Don't have an account?{' '}
             <Link to="/register" className="ga-link">Sign up</Link>
+          </p>
+          <p className="lg:hidden" style={{ textAlign: 'center', marginTop: 22, fontSize: 14, color: '#64748B' }}>
+            New here?{' '}
+            <Link to="/register" className="ga-link">Join with {codeWord} code</Link>
           </p>
         </form>
 

@@ -60,6 +60,8 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (formData) => {
     const { data } = await authAPI.register(formData);
+    // Guards who join with the estate code wait for a manager to approve them
+    if (data.pendingApproval) return { pendingApproval: true, message: data.message };
     const { user: u, accessToken } = data.data;
     localStorage.setItem('accessToken', accessToken);
     setUser(u);
