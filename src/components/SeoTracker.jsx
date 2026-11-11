@@ -12,21 +12,21 @@ import { useLocation } from 'react-router-dom';
 //   by vite.config.js when VITE_GA_MEASUREMENT_ID is set). IDs and tokens in
 //   the path are masked so no personal data reaches Google Analytics.
 
-const SITE_URL  = 'https://area-guards.areaconnect.pro';
-const APP_TITLE = 'AreaConnect Guard — Gate Security App';
+const SITE_URL  = 'https://areaguards.area-connector.com';
+const APP_TITLE = 'AreaConnector Guard — Gate Security App';
 
 const PUBLIC_PAGES = {
   '/login': [
-    "AreaConnect Guard Login — Security Officer App",
-    "Sign in to AreaConnect Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.",
+    "AreaConnector Guard Login — Security Officer App",
+    "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.",
   ],
   '/register': [
-    "Register as a Security Officer | AreaConnect Guard",
-    "Create your AreaConnect Guard account to manage gate access for your estate: scan visitor passes, log entries and respond to resident alerts.",
+    "Register as a Security Officer | AreaConnector Guard",
+    "Create your AreaConnector Guard account to manage gate access for your estate: scan visitor passes, log entries and respond to resident alerts.",
   ],
 };
 
-const DEFAULT_DESCRIPTION = "Sign in to AreaConnect Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.";
+const DEFAULT_DESCRIPTION = "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.";
 
 function setMeta(selector, attrs) {
   let el = document.head.querySelector(selector);

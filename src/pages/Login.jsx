@@ -454,7 +454,7 @@ export default function Login() {
         </form>
 
         <div className="hidden lg:block" style={{ marginTop: 40, paddingTop: 16, borderTop: '1px solid #F1F5F9', textAlign: 'center', fontSize: 11, color: '#94A3B8' }}>
-          © {new Date().getFullYear()} AreaConnect · Secure Estate Technology
+          © {new Date().getFullYear()} AreaConnector · Secure Estate Technology
         </div>
       </AuthShell>
     </>

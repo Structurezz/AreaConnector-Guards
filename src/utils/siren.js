@@ -1,4 +1,4 @@
-// Emergency siren. Shared design across the AreaConnect web apps.
+// Emergency siren. Shared design across the AreaConnector web apps.
 //
 // Why this exists: the old siren streamed a 9.6 MB MP3 from the API server,
 // played it once (no loop), and silently did nothing when the browser

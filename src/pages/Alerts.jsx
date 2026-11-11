@@ -42,7 +42,7 @@ const WHO_SHORT = { all: 'everyone in the estate', staff: 'the manager and guard
 const PLACES = ['Main gate', 'Back gate', 'Car park', 'Fence', 'Playground', 'Street'];
 const DO_THIS = ['Stay indoors', 'Lock your doors', 'Avoid the area', 'Come out now', 'Call the gate'];
 const ago = (d) => (d ? formatDistanceToNow(new Date(d), { addSuffix: true }) : '');
-const ROLE_WORD = { security: 'Guard', resident: 'Resident', estate_manager: 'Estate manager', super_admin: 'AreaConnect' };
+const ROLE_WORD = { security: 'Guard', resident: 'Resident', estate_manager: 'Estate manager', super_admin: 'AreaConnector' };
 
 // Site wording (estates keep the original text word for word)
 function siteWho(terms, isEstate) {

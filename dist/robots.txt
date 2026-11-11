@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://area-guards.areaconnect.pro/sitemap.xml
+Sitemap: https://areaguards.area-connector.com/sitemap.xml

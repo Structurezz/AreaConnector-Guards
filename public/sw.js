@@ -1,4 +1,4 @@
-/* AreaConnect service worker — rings incoming calls and shows missed calls
+/* AreaConnector service worker — rings incoming calls and shows missed calls
  * when the app is closed or in the background (Web Push). */
 
 self.addEventListener('install', () => self.skipWaiting());

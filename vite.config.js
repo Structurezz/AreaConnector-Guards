@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon.svg', 'icons/mask.svg'],
       manifest: {
-        name: 'AreaConnect Security',
+        name: 'AreaConnector Security',
         short_name: 'AC Guards',
         description: 'Gate verification terminal — works offline',
         theme_color: '#1D4ED8',

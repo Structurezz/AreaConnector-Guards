@@ -3,7 +3,7 @@ import { Phone, PhoneOff, Mic, MicOff, ShieldCheck } from 'lucide-react';
 import Portal from '../ui/Portal';
 import { useCall, END_TEXT, REASON_TEXT } from '../../context/CallContext';
 
-const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'AreaConnect support', resident: 'Neighbour' };
+const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'AreaConnector support', resident: 'Neighbour' };
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -94,7 +94,7 @@ export default function CallOverlay() {
           <p className="text-sm text-indigo-200 mt-1">{[ROLE_LABEL[peer.role] && peer.role !== 'resident' ? ROLE_LABEL[peer.role] : null, peer.unit].filter(Boolean).join(' · ')}</p>
           <p className={`mt-5 text-lg font-medium ${status === 'active' ? 'tabular-nums' : ''}`}>{subtitle}</p>
           {status === 'active' && call.path && (
-            <p className="mt-1 text-[11px] text-indigo-200/80">{call.path === 'direct' ? 'Direct connection' : 'Connected via AreaConnect relay'}</p>
+            <p className="mt-1 text-[11px] text-indigo-200/80">{call.path === 'direct' ? 'Direct connection' : 'Connected via AreaConnector relay'}</p>
           )}
           {left != null && status === 'active' && (
             <p className={`mt-1 text-xs ${left < 90 ? 'text-amber-300 font-semibold' : 'text-indigo-200'}`}>
