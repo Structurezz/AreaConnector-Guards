@@ -18,9 +18,9 @@ import { RollCallProvider, RollCallBanner } from '../rollcall/RollCall';
 // ── Source badge config ───────────────────────────────────────────────────────
 const ROLE_CFG = {
   security:      { label: 'Security Guard', Icon: Shield,      bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
-  resident:      { label: 'Resident',       Icon: UserRound,   bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
-  estate_manager:{ label: 'Estate Manager', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
-  super_admin:   { label: 'Estate Manager', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  resident:      { label: 'Member',       Icon: UserRound,   bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
+  estate_manager:{ label: 'Manager', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  super_admin:   { label: 'AreaConnector admin', Icon: Briefcase,   bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
 };
 
 const TYPE_META = {
@@ -251,7 +251,7 @@ export default function AppLayout({ children }) {
             <NavLink to="/verify" aria-label="Home" className="flex items-center gap-3 min-w-0 flex-1 active:opacity-80" style={{ textDecoration: 'none' }}>
               <GuardMark size={34} />
               <div className="min-w-0 flex-1 leading-tight">
-                <p className="text-[14px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span className="text-blue-400">Connect</span> <span className="text-white/40 font-medium">Guard</span></p>
+                <p className="text-[14px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span className="text-blue-400">Connector</span> <span className="text-white/40 font-medium">Guard</span></p>
                 <p className="text-[11px] text-white/50 flex items-center gap-1.5 truncate">
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${connected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                   {estateName}

@@ -67,7 +67,7 @@ export default function CallOverlay() {
   const left = call.maxSeconds && kind === 'standard' && direction === 'outgoing' ? Math.max(0, call.maxSeconds - elapsed) : null;
 
   let subtitle;
-  if (status === 'incoming') subtitle = kind === 'emergency' ? 'Emergency call' : kind === 'staff' ? `${ROLE_LABEL[peer.role] || 'Estate staff'} calling` : 'Neighbour calling';
+  if (status === 'incoming') subtitle = kind === 'emergency' ? 'Emergency call' : kind === 'staff' ? `${ROLE_LABEL[peer.role] || 'Staff'} calling` : 'Neighbour calling';
   else if (status === 'ringing') subtitle = 'Calling…';
   else if (status === 'connecting') subtitle = 'Connecting…';
   else if (status === 'active') subtitle = mmss(elapsed);

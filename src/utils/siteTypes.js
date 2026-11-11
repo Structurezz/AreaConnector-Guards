@@ -178,6 +178,14 @@ export const normType = (t) => (TYPES.includes(t) ? t : 'estate');
 // The last site type this device saw — used before anything is loaded
 // (boot loader, login screen) so a hospital guard doesn't see "estate".
 export const LAST_TYPE_KEY = 'ac:lastSiteType';
+// False on a cold visit (no ?site= and nothing remembered): the sign-in screen
+// then uses neutral words instead of estate ones.
+export function siteKnown() {
+  try {
+    const q = new URLSearchParams(window.location.search).get('site');
+    return TYPES.includes(q) || TYPES.includes(localStorage.getItem(LAST_TYPE_KEY));
+  } catch { return false; }
+}
 export const readLastSiteType = () => {
   try { return normType(localStorage.getItem(LAST_TYPE_KEY)); } catch { return 'estate'; }
 };

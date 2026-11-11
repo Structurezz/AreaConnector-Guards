@@ -33,9 +33,9 @@ const LEVEL = [
   { v: 'medium',   word: 'Just so you know', sub: 'Not dangerous right now', Icon: Info, color: '#2563EB' },
 ];
 const WHO = [
-  { v: 'all',            word: 'Everyone in the estate', sub: 'All residents, manager and guards', Icon: Users },
-  { v: 'staff',          word: 'Manager and guards',     sub: 'Not residents',                     Icon: Briefcase },
-  { v: 'estate_manager', word: 'Only the manager',       sub: 'Estate manager',                    Icon: UserCog },
+  { v: 'all',            word: 'Everyone on site',       sub: 'All members, managers and guards', Icon: Users },
+  { v: 'staff',          word: 'Manager and guards',     sub: 'Not members',                     Icon: Briefcase },
+  { v: 'estate_manager', word: 'Only the manager',       sub: 'Site manager',                    Icon: UserCog },
   { v: 'security',       word: 'Only the guards',        sub: 'Security team',                     Icon: Shield },
 ];
 const WHO_SHORT = { all: 'everyone in the estate', staff: 'the manager and guards', estate_manager: 'the estate manager', security: 'the guards' };

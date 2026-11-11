@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { siteKnown } from '../utils/siteTypes';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api';
@@ -12,6 +13,7 @@ import { useSite } from '../context/SiteContext';
 // "estate manager" for estates; the site's own word elsewhere (Administrator, Front desk…)
 const useManagerWord = () => {
   const { isEstate, terms } = useSite();
+  if (!siteKnown()) return 'manager';
   return isEstate ? 'estate manager' : (terms.manager || 'manager').toLowerCase();
 };
 
@@ -236,7 +238,7 @@ function MobileTicker() {
 function Wordmark({ size = 16 }) {
   return (
     <div style={{ fontSize: size, fontWeight: 700, letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
-      Area<span style={{ color: '#60A5FA' }}>Connect</span>
+      Area<span style={{ color: '#60A5FA' }}>Connector</span>
       <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}> Guard</span>
     </div>
   );
@@ -266,7 +268,7 @@ function BrandPanel() {
           Every gate, calm<br className="hidden lg:block" /> and <span style={{ color: '#60A5FA' }}>in control.</span>
         </h2>
         <p className="text-[13px] lg:text-[15px]" style={{ color: 'rgba(226,232,240,0.6)', lineHeight: 1.6, margin: '12px 0 0', maxWidth: 440 }}>
-          Verify visitors in seconds, log every entry and respond to {isEstate ? 'estate alerts' : `${terms.site.toLowerCase()} alerts`} the moment they happen.
+          Verify visitors in seconds, log every entry and respond to {!siteKnown() ? 'alerts' : isEstate ? 'estate alerts' : `${terms.site.toLowerCase()} alerts`} the moment they happen.
         </p>
 
         <div className="mt-5 lg:hidden"><MobileTicker /></div>
@@ -276,7 +278,7 @@ function BrandPanel() {
       {/* Footer */}
       <div className="relative hidden lg:flex items-center justify-between" style={{ fontSize: 11, color: 'rgba(226,232,240,0.35)' }}>
         <span>Powered by <span style={{ fontWeight: 600, color: 'rgba(226,232,240,0.55)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864</span>
-        <span>{isEstate ? 'Secure Estate Technology' : `Secure ${terms.site} Technology`}</span>
+        <span>{!siteKnown() ? 'Secure Site Technology' : isEstate ? 'Secure Estate Technology' : `Secure ${terms.site} Technology`}</span>
       </div>
     </div>
   );
@@ -300,7 +302,7 @@ function MobileBrand() {
       <GuardMark size={32} />
       <div style={{ lineHeight: 1.15 }}>
         <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', color: '#0F172A' }}>
-          Area<span style={{ color: '#2563EB' }}>Connect</span><span style={{ color: '#64748B', fontWeight: 500 }}> Guard</span>
+          Area<span style={{ color: '#2563EB' }}>Connector</span><span style={{ color: '#64748B', fontWeight: 500 }}> Guard</span>
         </div>
         <div style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}>Security portal</div>
       </div>
@@ -357,7 +359,7 @@ export default function Login() {
   const [error, setError]     = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
   const { isEstate, terms } = useSite();
-  const codeWord = isEstate ? 'estate' : (terms.site || 'site').toLowerCase();
+  const codeWord = !siteKnown() ? 'site' : isEstate ? 'estate' : (terms.site || 'site').toLowerCase();
   const { login }  = useAuth();
   const navigate   = useNavigate();
 

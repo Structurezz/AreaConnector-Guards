@@ -17,16 +17,16 @@ const APP_TITLE = 'AreaConnector Guard — Gate Security App';
 
 const PUBLIC_PAGES = {
   '/login': [
-    "AreaConnector Guard Login — Security Officer App",
-    "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.",
+    "AreaConnector Guard Login — Gate & Reception App",
+    "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and respond to alerts — at any gate or reception, even offline.",
   ],
   '/register': [
     "Register as a Security Officer | AreaConnector Guard",
-    "Create your AreaConnector Guard account to manage gate access for your estate: scan visitor passes, log entries and respond to resident alerts.",
+    "Create your AreaConnector Guard account to manage gate access for your site: scan visitor passes, log entries and respond to alerts.",
   ],
 };
 
-const DEFAULT_DESCRIPTION = "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and receive estate security alerts — even offline.";
+const DEFAULT_DESCRIPTION = "Sign in to AreaConnector Guard to verify visitor QR passes and 6-digit codes, check guests in and out, and respond to alerts — at any gate or reception, even offline.";
 
 function setMeta(selector, attrs) {
   let el = document.head.querySelector(selector);

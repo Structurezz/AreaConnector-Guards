@@ -78,7 +78,7 @@ export default function Sidebar({ mobile = false, onClose, alertCount = 0 }) {
       <Link to="/verify" onClick={onClose} className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ textDecoration: 'none' }}>
         <GuardMark />
         <span className="min-w-0 leading-tight">
-          <span className="block text-[15px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span style={{ color: '#60A5FA' }}>Connect</span></span>
+          <span className="block text-[15px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span style={{ color: '#60A5FA' }}>Connector</span></span>
           <span className="block text-[11px] text-white/40">Guard · gate security</span>
         </span>
       </Link>

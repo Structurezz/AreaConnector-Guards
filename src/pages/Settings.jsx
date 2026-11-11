@@ -234,7 +234,7 @@ export default function SecuritySettings() {
         <div className="space-y-4 min-w-0">
           {/* Profile details */}
           <div className="g-card g-rise p-5" style={{ animationDelay: '60ms' }}>
-            <SectionHead icon={UserIcon} title="Profile details" hint="Shown to residents and estate staff" />
+            <SectionHead icon={UserIcon} title="Profile details" hint="Shown to members and staff" />
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <label className="g-label block mb-1.5">Full name</label>
@@ -254,7 +254,7 @@ export default function SecuritySettings() {
 
           {/* Privacy */}
           <div className="g-card g-rise p-5" style={{ animationDelay: '120ms' }}>
-            <SectionHead icon={form.isDiscoverable ? Eye : EyeOff} title="Privacy" hint="Group chat, alerts and estate broadcasts are unaffected." tone="slate" />
+            <SectionHead icon={form.isDiscoverable ? Eye : EyeOff} title="Privacy" hint="Group chat, alerts and broadcasts are unaffected." tone="slate" />
             <button type="button" onClick={() => set('isDiscoverable', !form.isDiscoverable)}
               className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all"
               style={{
@@ -267,7 +267,7 @@ export default function SecuritySettings() {
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
                   {form.isDiscoverable
-                    ? 'Residents can find you when they search to start a chat.'
+                    ? 'Members can find you when they search to start a chat.'
                     : 'Your name is hidden from the DM search. Existing chats keep working.'}
                 </div>
               </div>

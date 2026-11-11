@@ -63,7 +63,7 @@ export default function Register() {
       <div style={{ marginBottom: 22 }}>
         <div className="g-label ga-eyebrow" style={{ color: '#2563EB', marginBottom: 6 }}>Join the gate team</div>
         <h1 className="ga-title">Create your account</h1>
-        <p className="ga-sub">Register as a security guard for your estate</p>
+        <p className="ga-sub">Register as security for your site</p>
       </div>
 
       {error && <AuthError>{error}</AuthError>}
@@ -88,7 +88,7 @@ export default function Register() {
               autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="off"
               style={{ paddingLeft: 40, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.12em', textTransform: 'uppercase' }} />
           </div>
-          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '6px 0 0' }}>Ask your estate manager for this code.</p>
+          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '6px 0 0' }}>Ask your manager or security lead for this code.</p>
         </div>
 
         <div>

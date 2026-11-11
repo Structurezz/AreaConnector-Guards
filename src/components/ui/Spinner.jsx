@@ -11,7 +11,7 @@ const BRAND = {
   "track": "#E2E8F0",
   "name": [
     "Area",
-    "Connect"
+    "Connector"
   ],
   "tagline": "Guard / Staff",
   "fallback": [
